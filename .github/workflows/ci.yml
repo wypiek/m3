@@ -1,0 +1,33 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # Arch has current gtk4-layer-shell (session lock API) and Mesa.
+    container: archlinux:latest
+    steps:
+      - name: Dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git rust clang pkgconf \
+            wayland wayland-protocols libxkbcommon libinput seatd systemd-libs \
+            mesa libglvnd libdrm libdisplay-info gtk4 gtk4-layer-shell pam \
+            libpulse dbus foot weston xorg-xwayland vte4 webkitgtk-6.0 \
+            gstreamer gst-plugins-base gst-plugins-good
+      - uses: actions/checkout@v4
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Build
+        run: cargo build --workspace --locked
+      - name: Tests
+        env:
+          XDG_RUNTIME_DIR: /tmp/xdg-runtime
+        run: |
+          mkdir -m 0700 -p "$XDG_RUNTIME_DIR"
+          useradd -m ci && chown -R ci "$GITHUB_WORKSPACE" "$XDG_RUNTIME_DIR"
+          # The compositor refuses to run as root.
+          su ci -c "cd $GITHUB_WORKSPACE && XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR cargo test --workspace --locked"

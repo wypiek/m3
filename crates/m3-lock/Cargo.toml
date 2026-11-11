@@ -1,0 +1,25 @@
+[package]
+name = "m3-lock"
+description = "The m3 lock screen (ext-session-lock-v1 + PAM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+m3-core.workspace = true
+m3-theme.workspace = true
+m3-widgets.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_49"] }
+gtk4-session-lock = { version = "0.4.1", features = ["v1_2"] }
+pam-client = "0.5.0"
+zeroize = "1.9.1"
+async-channel = "2.5.0"
+libc = "0.2.180"
+
+[lints]
+workspace = true

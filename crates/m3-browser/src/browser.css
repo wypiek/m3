@@ -1,0 +1,164 @@
+/* ---- m3-browser (Material 3 Expressive) ---------------------------------- */
+
+window.m3.m3-browser-window { background-color: var(--m3-surface-container); }
+
+/* Tab strip in the header: pills; the selected tab fills and squares off a
+ * little, with a spring. */
+.m3-browser-header { min-height: 52px; padding: 0 8px; }
+.m3-tabstrip { border-spacing: 4px; padding: 6px 0; }
+.m3-tab {
+  min-height: 38px;
+  border-radius: var(--m3-radius-full);
+  background-color: transparent;
+  color: var(--m3-on-surface-variant);
+  transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
+              border-radius var(--m3-dur-default-spatial) var(--m3-ease-default-spatial);
+}
+.m3-tab:hover { background-color: var(--m3-on-surface-hover); }
+.m3-tab.selected {
+  background-color: var(--m3-surface);
+  color: var(--m3-on-surface);
+  border-radius: var(--m3-radius-l);
+}
+.m3-tab button.m3-tab-main, .m3-tab button.m3-tab-main:hover, .m3-tab button.m3-tab-main:active {
+  min-height: 38px;
+  padding: 0 4px 0 14px;
+  background: none;
+  color: inherit;
+  border-radius: inherit;
+  transform: none;
+}
+.m3-tab.selected .m3-tab-title { font-weight: 600; }
+.m3-tab-glyph { font-size: 18px; color: var(--m3-on-surface-variant); }
+.m3-tab .m3-loading-indicator { color: var(--m3-primary); }
+.m3-tab button.m3-tab-close {
+  min-width: 26px;
+  min-height: 26px;
+  margin-right: 6px;
+  padding: 0;
+  opacity: 0.7;
+}
+.m3-tab button.m3-tab-close .m3-icon { font-size: 18px; }
+.m3-tab button.m3-tab-close:hover { opacity: 1; background-color: var(--m3-on-surface-hover); }
+button.m3-new-tab { min-width: 38px; min-height: 38px; background-color: var(--m3-surface-container-highest); }
+
+/* Toolbar */
+.m3-browser-toolbar { padding: 2px 12px 10px 12px; }
+.m3-nav-group > button { min-width: 44px; min-height: 44px; padding: 0; }
+.m3-nav-group > button:disabled { background-color: var(--m3-surface-container-high); color: var(--m3-disabled-content); }
+.m3 entry.m3-address {
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+  font-size: 15px;
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial),
+              background-color var(--m3-dur-short) var(--m3-ease-effects);
+}
+.m3 entry.m3-address:focus-within {
+  border: none;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-surface-bright);
+  box-shadow: inset 0 0 0 2px var(--m3-primary);
+}
+.m3-browser-toolbar > button.icon, .m3-browser-toolbar > menubutton > button { min-width: 44px; min-height: 44px; padding: 0; }
+togglebutton.m3-star:checked, button.m3-star:checked {
+  background-color: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+  border-radius: var(--m3-radius-l);
+}
+
+/* The page sits on a large rounded pane; wavy progress floats on its top. */
+.m3-browser-pane {
+  margin: 0 8px 8px 8px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface);
+}
+.m3-browser-progress { color: var(--m3-primary); margin: 0 18px; }
+
+/* Find bar: a pill under the toolbar. */
+.m3-find-bar {
+  margin: 0 12px 10px 12px;
+  padding: 4px 6px 4px 6px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+}
+.m3-find-bar entry, .m3 .m3-find-bar entry {
+  min-height: 40px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+}
+.m3-find-bar label.error { color: var(--m3-error); }
+
+/* Suggestions */
+popover.m3-suggest-popover > contents { padding: 6px; border-radius: var(--m3-radius-xl); }
+.m3-suggestions { background: none; }
+.m3-suggestions > row {
+  min-height: 52px;
+  padding: 0 14px;
+  border-radius: var(--m3-radius-l);
+}
+.m3-suggestions > row:selected {
+  background-color: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  border-radius: var(--m3-radius-full);
+}
+
+/* New-tab page */
+.m3-ntp-page { background-color: var(--m3-surface); }
+.m3-ntp { padding: 96px 32px 48px 32px; min-width: 640px; border-spacing: 6px; }
+.m3-ntp-greeting { color: var(--m3-primary); }
+.m3-ntp-clock {
+  font-size: 96px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-feature-settings: "tnum" 1;
+  font-variation-settings: "wght" 700, "wdth" 112, "ROND" 100;
+  color: var(--m3-on-surface);
+  margin-bottom: 20px;
+}
+.m3 entry.m3-ntp-search {
+  min-height: 64px;
+  min-width: 640px;
+  padding: 0 28px;
+  font-size: 17px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+}
+.m3 entry.m3-ntp-search:focus-within { box-shadow: inset 0 0 0 2px var(--m3-primary); background-color: var(--m3-surface-container-highest); }
+.m3-ntp-section { color: var(--m3-primary); margin: 36px 0 4px 12px; }
+.m3 button.m3-ntp-tile {
+  padding: 16px 8px 12px 8px;
+  border-radius: var(--m3-radius-xl);
+  background: none;
+  color: var(--m3-on-surface);
+}
+.m3 button.m3-ntp-tile:hover { background-color: var(--m3-surface-container); }
+.m3-ntp-initial { font-size: 28px; font-weight: 700; font-variation-settings: "ROND" 100; }
+.m3-shape-icon.primary-tile .m3-shape { color: var(--m3-primary-container); }
+.m3-shape-icon.primary-tile > label { color: var(--m3-on-primary-container); }
+
+/* Downloads popover */
+popover.m3-downloads-popover > contents { padding: 16px; border-radius: var(--m3-radius-xl); }
+.m3-download-row { padding: 12px 8px 12px 16px; background-color: var(--m3-surface-container-high); }
+.m3-download-icon { color: var(--m3-primary); }
+
+/* Dialogs */
+window.m3.m3-dialog-window { background: none; }
+window.m3.m3-dialog-window .m3-dialog {
+  padding: 28px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface-container-high);
+}
+window.m3.m3-dialog-window .m3-dialog label { color: var(--m3-on-surface); }
+window.m3.m3-dialog-window .m3-dialog .m3-secondary-text { color: var(--m3-on-surface-variant); }
+
+/* Library */
+window.m3.m3-library-window { background-color: var(--m3-surface-container); }
+.m3-library-page { padding: 16px 24px 24px 24px; }
+.m3-library-row { padding: 0 8px 0 0; background-color: var(--m3-surface-bright); }
+.m3 button.m3-library-open { min-height: 64px; padding: 0 16px; background: none; color: var(--m3-on-surface); border-radius: inherit; }
+.m3-library-glyph { color: var(--m3-primary); }

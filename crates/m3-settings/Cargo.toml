@@ -1,0 +1,24 @@
+[package]
+name = "m3-settings"
+description = "The m3 Settings application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+m3-core.workspace = true
+m3-protocol.workspace = true
+m3-theme.workspace = true
+m3-widgets.workspace = true
+m3-services.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde_json.workspace = true
+gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_49"] }
+gio-unix = "0.22.8"
+async-channel = "2.5.0"
+
+[lints]
+workspace = true

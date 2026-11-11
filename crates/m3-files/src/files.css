@@ -1,0 +1,121 @@
+/* ---- m3-files (Material 3 Expressive) ------------------------------------- */
+
+window.m3.m3-files-window { background-color: var(--m3-surface-container); }
+.m3-files-header { min-height: 60px; }
+.m3-files-header .m3-button-group > button { min-width: 44px; min-height: 44px; padding: 0; }
+
+/* Content sits on a large rounded pane next to the drawer. */
+.m3-files-pane {
+  margin: 0 12px 12px 0;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface);
+}
+.m3-files-sidebar { padding: 4px 8px 12px 12px; }
+.m3-files-sidebar row.m3-nav-item { min-height: 48px; margin: 1px 0; padding: 0 14px; border-radius: var(--m3-radius-full); }
+.m3-files-sidebar row.m3-nav-item.current { background-color: var(--m3-secondary-container); color: var(--m3-on-secondary-container); font-weight: 650; }
+.m3-files-sidebar row.m3-nav-item.current .m3-icon { font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24; }
+.m3-files-sidebar row.m3-files-section-row, .m3-files-sidebar row.m3-files-section-row:hover { background: none; min-height: 36px; }
+.m3-files-section { color: var(--m3-primary); margin: 14px 0 2px 6px; }
+.m3-files-count {
+  min-width: 24px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+  font-size: 11px;
+  font-weight: 650;
+}
+progressbar.m3-files-usage > trough { min-height: 6px; border-radius: var(--m3-radius-full); background-color: var(--m3-surface-container-highest); border: none; }
+progressbar.m3-files-usage > trough > progress { min-height: 6px; border-radius: var(--m3-radius-full); background-color: var(--m3-primary); border: none; }
+.m3 button.m3-files-eject { min-width: 32px; min-height: 32px; }
+
+/* Path bar: pill breadcrumbs; the current folder is a filled pill. */
+.m3-files-pathbar { margin: 0 8px; min-height: 44px; }
+.m3-files-crumbs {
+  padding: 4px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+}
+.m3 button.m3-files-crumb {
+  min-height: 34px;
+  padding: 0 14px;
+  color: var(--m3-on-surface-variant);
+  font-weight: 500;
+}
+.m3 button.m3-files-crumb.current {
+  background-color: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  font-weight: 650;
+}
+.m3-files-crumb-sep { color: var(--m3-outline); }
+.m3-files-search-chip {
+  margin-left: 8px;
+  padding: 0 12px;
+  border-radius: var(--m3-radius-s);
+  background-color: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+}
+.m3 entry.m3-files-location {
+  min-height: 44px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+  box-shadow: inset 0 0 0 2px var(--m3-primary);
+}
+.m3-files-searchbar { padding: 12px 16px 4px 16px; }
+
+/* Grid tiles: rounded squares that round off further on hover. */
+gridview.m3-files-grid { padding: 12px; background: none; }
+gridview.m3-files-grid > child {
+  padding: 10px 6px 8px 6px;
+  margin: 2px;
+  border-radius: var(--m3-radius-l);
+  transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
+              border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+gridview.m3-files-grid > child:hover { background-color: var(--m3-surface-container-high); border-radius: var(--m3-radius-xl); }
+gridview.m3-files-grid > child:selected {
+  background-color: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+  border-radius: var(--m3-radius-xl);
+}
+.m3-files-thumb { -gtk-icon-size: 64px; border-radius: var(--m3-radius-m); }
+gridview.m3-files-grid rubberband, columnview.m3-files-list rubberband {
+  border: 2px solid var(--m3-primary);
+  border-radius: var(--m3-radius-s);
+  background-color: var(--m3-primary-hover);
+}
+
+/* List view rows. */
+columnview.m3-files-list { background: none; }
+columnview.m3-files-list > header > row > cell {
+  padding: 8px 12px;
+  color: var(--m3-on-surface-variant);
+  font-weight: 600;
+  border: none;
+  box-shadow: none;
+}
+columnview.m3-files-list > listview > row {
+  min-height: 44px;
+  margin: 1px 8px;
+  border-radius: var(--m3-radius-m);
+}
+columnview.m3-files-list > listview > row:hover { background-color: var(--m3-surface-container-high); }
+columnview.m3-files-list > listview > row:selected { background-color: var(--m3-secondary-container); color: var(--m3-on-secondary-container); }
+columnview.m3-files-list > listview > row > cell { padding: 0 12px; }
+
+/* Empty / error state. */
+.m3-files-status { padding: 24px; }
+.m3-files-status .m3-shape-icon > label { font-size: 44px; }
+
+/* Dialogs. */
+window.m3-files-dialog-window { background: none; }
+.m3-files-dialog-window .m3-dialog { margin: 12px; }
+.m3-files-error { color: var(--m3-error); }
+.m3-files-prop-row { min-height: 48px; padding: 6px 16px; background-color: var(--m3-surface-container-high); }
+.m3 button.m3-files-app { min-height: 52px; padding: 0 12px; border-radius: var(--m3-radius-m); color: var(--m3-on-surface); }
+
+/* Operations popover. */
+.m3-files-ops > contents { padding: 8px; }
+.m3-files-op { padding: 12px 8px 10px 16px; background-color: var(--m3-surface-container-high); }

@@ -1,0 +1,10 @@
+[Unit]
+Description=m3 desktop session
+Documentation=man:systemd.special(7)
+BindsTo=graphical-session.target
+Before=graphical-session.target
+Wants=graphical-session-pre.target xdg-desktop-autostart.target
+After=graphical-session-pre.target
+# Started and stopped by the compositor (`m3 --session`).
+RefuseManualStart=no
+StopWhenUnneeded=no

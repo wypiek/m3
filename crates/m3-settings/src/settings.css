@@ -1,0 +1,73 @@
+/* ---- m3-settings (Material 3 Expressive) --------------------------------- */
+
+/* The window is a surface-container; pages sit on a large rounded pane. */
+window.m3.m3-settings-window { background-color: var(--m3-surface-container); }
+.m3-settings-side { padding: 0 12px 16px 16px; background: none; }
+.m3-settings-title { margin: 4px 8px 12px 8px; color: var(--m3-on-surface); }
+.m3-settings-side list { background-color: transparent; }
+.m3-settings-pane {
+  margin: 0 12px 12px 0;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface);
+}
+
+/* Navigation: pill items; the selected one fills and its icon fills too. */
+.m3-navigation-drawer { background: none; padding: 4px 0; min-width: 0; }
+.m3-navigation-drawer row.m3-nav-item {
+  min-height: 52px;
+  margin: 1px 0;
+  padding: 0 18px;
+  border-radius: var(--m3-radius-full);
+  transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
+              border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+.m3-navigation-drawer row.m3-nav-item:active { border-radius: var(--m3-radius-l); }
+.m3-navigation-drawer row.m3-nav-item:selected {
+  background-color: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+.m3-navigation-drawer row.m3-nav-item:selected .m3-icon {
+  color: var(--m3-on-secondary-container);
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+.m3-settings-side .m3-search { min-height: 52px; background-color: var(--m3-surface-container-highest); }
+
+/* Pages */
+.m3-settings-page { padding: 40px 32px 72px 32px; }
+.m3-page-title { color: var(--m3-on-surface); margin-bottom: 4px; }
+.m3-card-title { margin: 20px 0 2px 20px; color: var(--m3-primary); }
+
+/* Grouped settings rows: segments on surface-container. */
+.m3-settings-card > * { background-color: var(--m3-surface-container); }
+.m3-settings-row { min-height: 72px; padding: 10px 16px 10px 24px; }
+.m3-row-title { color: var(--m3-on-surface); }
+.m3-settings-row scale { min-width: 220px; }
+.m3-note { margin: 0 20px; }
+.m3-scheme-preview { padding: 4px 0; }
+
+/* Preset swatches are expressive shapes that morph under the pointer. */
+button.m3-swatch-button { min-width: 48px; min-height: 48px; padding: 4px; border-radius: var(--m3-radius-full); }
+button.m3-swatch-button:hover, button.m3-swatch-button:active { background: none; }
+
+button.m3-wallpaper-tile {
+  padding: 0;
+  min-width: 160px;
+  min-height: 100px;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-surface-container-high);
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+button.m3-wallpaper-tile:hover { border-radius: var(--m3-radius-xl); }
+button.m3-wallpaper-tile picture { border-radius: inherit; }
+.m3-wallpaper-grid { padding: 8px 16px 16px 16px; }
+
+button.m3-shortcut {
+  font-family: var(--m3-font-mono);
+  padding: 0 16px;
+  border-radius: var(--m3-radius-m);
+  background-color: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface);
+}
+
+.m3-about-hero { padding: 16px 0 24px 0; }
+.m3-about-logo > label { color: var(--m3-on-primary-container); }

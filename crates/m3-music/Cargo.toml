@@ -1,0 +1,29 @@
+[package]
+name = "m3-music"
+description = "The m3 music player: library, Material 3 Expressive now-playing view, MPRIS (GStreamer)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "m3-music"
+path = "src/main.rs"
+
+[dependencies]
+m3-core.workspace = true
+m3-theme.workspace = true
+m3-widgets.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_49"] }
+gstreamer = "0.25.4"
+gstreamer-pbutils = "0.25.4"
+zbus = "6.2.1"
+async-channel = "2.5.0"
+
+[lints]
+workspace = true

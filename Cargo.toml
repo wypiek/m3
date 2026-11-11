@@ -1,0 +1,68 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/m3-protocol",
+    "crates/m3-core",
+    "crates/m3-compositor",
+    "crates/m3ctl",
+    "crates/m3-theme",
+    "crates/m3-shell",
+    "crates/m3-services",
+    "crates/m3-lock",
+    "crates/m3-session",
+    "crates/m3-settings",
+    "crates/m3-widgets",
+    "crates/m3-terminal",
+    "crates/m3-music",
+    "crates/m3-browser",
+    "crates/m3-files",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+authors = ["m3 contributors"]
+
+[workspace.dependencies]
+m3-protocol = { path = "crates/m3-protocol" }
+m3-core = { path = "crates/m3-core" }
+m3-theme = { path = "crates/m3-theme" }
+m3-services = { path = "crates/m3-services" }
+m3-widgets = { path = "crates/m3-widgets" }
+toml_edit = { version = "0.25.19", features = ["serde"] }
+
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+toml = "1.2.1"
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+clap = { version = "4.6.7", features = ["derive"] }
+tempfile = "3.27.0"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+rustix = { version = "1.1.6", features = ["fs", "process", "net"] }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+
+# Keep dev builds small: line tables are enough for backtraces.
+# Smithay 0.7.0 with a fix for layer surfaces being validated after their role
+# object was destroyed (see vendor/README.md).
+[patch.crates-io]
+smithay = { path = "vendor/smithay-0.7.0" }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 4

@@ -1,0 +1,135 @@
+/* ---- Desktop widgets (desktop.rs) ------------------------------------------
+ * Fixed tones keep the same contrast in light and dark mode: deep ink cards
+ * (on-*-fixed, tone 10), rose / gold accents (on-*-fixed-variant, tone 30)
+ * and light text (*-fixed, tone 90). */
+
+window.m3-desktop { background: none; }
+.m3-desktop-root { padding: 56px 72px 32px 72px; }
+.m3-desktop-start { margin-left: 64px; }
+.m3-desktop-end { margin-right: 48px; }
+
+/* Hero clock: heavy, wide, tight — two-tone digits. */
+.m3-desk-clock { margin-bottom: 8px; }
+.m3-desk-digit {
+  font-size: 168px;
+  font-weight: 900;
+  letter-spacing: -6px;
+  margin: 0 -6px;
+  font-feature-settings: "tnum" 1;
+  font-variation-settings: "wght" 900, "wdth" 120, "ROND" 0, "opsz" 144;
+}
+.m3-desk-digit.ink { color: var(--m3-on-primary-fixed); }
+.m3-desk-digit.accent { color: var(--m3-on-primary-fixed-variant); }
+
+/* "G (29) (06) D" */
+.m3-desk-letter {
+  font-size: 118px;
+  font-weight: 800;
+  color: var(--m3-on-primary-fixed);
+  font-variation-settings: "wght" 800, "wdth" 110, "ROND" 0;
+}
+.m3-desk-date-cookie .m3-shape { color: var(--m3-on-primary-fixed); }
+.m3-desk-date-num {
+  color: var(--m3-primary-fixed);
+  font-size: 34px;
+  font-weight: 700;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Pills under the greeting and around the column. */
+.m3-desk-pills { margin-left: 4px; }
+.m3-desk-pill {
+  padding: 10px 34px;
+  border-radius: var(--m3-radius-full);
+  font-size: 20px;
+  font-weight: 600;
+}
+.m3-desk-pill.small { padding: 10px 18px; font-size: 15px; }
+.m3-desk-pill.rose { background-color: var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
+.m3-desk-pill.gold { background-color: var(--m3-on-tertiary-fixed-variant); color: var(--m3-tertiary-fixed); margin-left: -12px; }
+
+/* Cards: deep ink, very round, each with its own silhouette. */
+.m3-desk-card {
+  padding: 16px;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-on-primary-fixed);
+  color: var(--m3-primary-fixed);
+}
+
+/* Day: tall condensed number on a flower. */
+.m3-desk-day .m3-shape { color: var(--m3-on-primary-fixed); }
+.m3-desk-day-num {
+  color: var(--m3-primary-fixed);
+  font-size: 92px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  font-variation-settings: "wght" 700, "wdth" 25, "opsz" 144;
+}
+
+/* Shortcuts: a rounded "triangle" with app circles and a search pill. */
+.m3-desk-shortcuts {
+  min-width: 168px;
+  padding: 18px 14px 14px 14px;
+  border-radius: 96px 96px 40px 40px;
+}
+.m3-desk-circle {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: var(--m3-radius-full);
+}
+.m3-desk-circle.rose { background-color: var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
+.m3-desk-circle.ink { background-color: transparent; border: 2px solid var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
+.m3-desk-circle.big { min-width: 60px; min-height: 60px; }
+.m3-desk-circle:hover { background-image: linear-gradient(var(--m3-on-primary-hover), var(--m3-on-primary-hover)); }
+.m3-desk-search {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-on-tertiary-fixed-variant);
+  color: var(--m3-tertiary-fixed);
+}
+
+/* Now playing: a blob with round art. */
+.m3-desk-media {
+  padding: 14px;
+  border-radius: 80px 80px 80px 80px;
+}
+.m3-desk-art-picture { border-radius: var(--m3-radius-full); }
+.m3-desk-art-fallback .m3-shape { color: var(--m3-on-primary-fixed-variant); }
+.m3-desk-art-fallback > label { color: var(--m3-primary-fixed); }
+.m3-desk-media-title { color: var(--m3-primary-fixed-dim); }
+
+/* Countdown: a dome with the title, then the number on a sunny shape. */
+.m3-desk-dome {
+  min-width: 168px;
+  min-height: 96px;
+  padding: 24px 16px 18px 16px;
+  border-radius: 96px 96px 28px 28px;
+}
+.m3-desk-sunny .m3-shape { color: var(--m3-tertiary-fixed-dim); }
+.m3-desk-sunny-num { color: var(--m3-on-tertiary-fixed); font-size: 24px; font-weight: 800; }
+
+/* Storage pill and RAM / CPU bubbles. */
+.m3-desk-storage { padding: 10px 18px; border-radius: var(--m3-radius-full); }
+.m3-desk-storage-icon .m3-shape { color: var(--m3-primary-fixed-dim); }
+.m3-desk-storage-icon > label { color: var(--m3-on-primary-fixed); }
+.m3-desk-stat { font-size: 18px; font-weight: 700; font-feature-settings: "tnum" 1; }
+.m3-desk-bubble {
+  min-width: 84px;
+  min-height: 84px;
+  border-radius: var(--m3-radius-full);
+}
+.m3-desk-bubble.rose { background-color: var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
+.m3-desk-bubble.gold { background-color: var(--m3-on-tertiary-fixed-variant); color: var(--m3-tertiary-fixed); }
+.m3-desk-bubble > label:first-child { margin-top: 18px; }
+
+/* Weather: current conditions and three day pills. */
+.m3-desk-weather { min-width: 180px; border-radius: var(--m3-radius-xl); }
+.m3-desk-weather-icon { font-size: 44px; color: var(--m3-tertiary-fixed-dim); }
+.m3-desk-day-pill {
+  padding: 10px 6px;
+  border-radius: var(--m3-radius-full);
+}
+.m3-desk-day-pill.rose { background-color: var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
+.m3-desk-day-pill.gold { background-color: var(--m3-on-tertiary-fixed-variant); color: var(--m3-tertiary-fixed); }

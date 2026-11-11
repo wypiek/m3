@@ -1,0 +1,40 @@
+/* ---- system tray (StatusNotifierItem) ------------------------------------- */
+
+/* Tray icons sit together in a tonal pill. */
+.m3-tray {
+  padding: 2px 4px;
+  border-spacing: 2px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+}
+.m3-panel .m3-tray button.m3-tray-item {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--m3-radius-full);
+  color: var(--m3-on-surface-variant);
+  -gtk-icon-style: symbolic;
+}
+.m3-panel .m3-tray button.m3-tray-item:hover { background-color: var(--m3-on-surface-hover); }
+.m3-panel .m3-tray button.m3-tray-item:active { border-radius: var(--m3-radius-s); }
+/* Items asking for attention get a tertiary container that squares off. */
+.m3-panel .m3-tray button.m3-tray-item.attention {
+  border-radius: var(--m3-radius-m);
+  background-color: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+}
+
+/* Tray menus: Expressive menus with rounded, inset items. */
+popover.m3-tray-menu > contents { min-width: 220px; padding: 4px; }
+.m3-tray-menu button.m3-menu-item {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--m3-radius-m);
+  color: var(--m3-on-surface);
+  font-weight: 400;
+}
+.m3-tray-menu button.m3-menu-item:hover { background-color: var(--m3-on-surface-hover); }
+.m3-tray-menu button.m3-menu-item:disabled { color: var(--m3-disabled-content); }
+.m3-tray-menu .m3-tray-toggle { color: var(--m3-primary); }
+.m3-tray-menu button.m3-tray-menu-back { color: var(--m3-primary); }
+.m3-tray-menu separator { margin: 4px 8px; background-color: var(--m3-outline-variant); min-height: 1px; }

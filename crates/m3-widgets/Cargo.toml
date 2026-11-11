@@ -1,0 +1,16 @@
+[package]
+name = "m3-widgets"
+description = "Material 3 Expressive GTK 4 components for m3 (shapes, morphing, wavy progress, app theming)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+m3-core.workspace = true
+m3-theme.workspace = true
+tracing.workspace = true
+gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_49"] }
+
+[lints]
+workspace = true

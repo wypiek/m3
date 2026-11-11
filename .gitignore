@@ -1,0 +1,17 @@
+# Build output
+/target
+/packaging/arch/src/
+/packaging/arch/pkg/
+*.pkg.tar.*
+
+# Editors and OS
+*.swp
+*~
+.DS_Store
+.idea/
+.vscode/
+.claude/
+
+# Local test output
+/target-shot*.png
+/screenshots/

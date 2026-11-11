@@ -1,0 +1,13 @@
+[package]
+name = "m3-session"
+description = "Session entry point for the m3 desktop (started by the display manager)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+m3-core.workspace = true
+
+[lints]
+workspace = true

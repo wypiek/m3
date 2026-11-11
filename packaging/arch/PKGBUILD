@@ -1,0 +1,55 @@
+# Maintainer: m3 contributors
+# Builds the m3 desktop from this source tree:  cd packaging/arch && makepkg -si
+pkgname=m3-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="m3 — a Material 3 Expressive Wayland desktop environment"
+arch=('x86_64' 'aarch64')
+license=('GPL-3.0-or-later' 'Apache-2.0' 'MIT' 'OFL-1.1')
+depends=(
+  'gtk4' 'gtk4-layer-shell' 'glib2' 'cairo' 'pango' 'gdk-pixbuf2'
+  'wayland' 'libxkbcommon' 'libinput' 'seatd' 'systemd-libs' 'mesa' 'libglvnd'
+  'libdisplay-info' 'libdrm' 'pam' 'libpulse' 'dbus'
+  'vte4' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good'
+)
+makedepends=('rust' 'cargo' 'clang' 'pkgconf')
+optdepends=(
+  'xorg-xwayland: run X11 applications'
+  'networkmanager: Wi-Fi and network settings'
+  'bluez: Bluetooth'
+  'upower: battery status'
+  'power-profiles-daemon: power modes'
+  'pipewire-pulse: audio controls (with wireplumber)'
+  'wireplumber: audio session manager'
+  'xdg-desktop-portal-gtk: file pickers and settings portal'
+  'inter-font: fallback interface font'
+  'foot: a fallback terminal'
+  'libnotify: notify-send'
+  'gst-libav: more audio formats in m3-music (AAC/M4A, WMA, …)'
+)
+backup=('etc/pam.d/m3-lock')
+options=('!lto' '!debug')
+_root="$(realpath "$startdir/../..")"
+# Apps still in development are not built or shipped yet.
+_unfinished=(--exclude m3-browser)
+
+build() {
+  cd "$_root"
+  export CARGO_TARGET_DIR="$srcdir/target"
+  # Keep build paths out of the binaries.
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$srcdir=/build --remap-path-prefix=$_root=/src --remap-path-prefix=$HOME=/home"
+  cargo build --release --locked --workspace "${_unfinished[@]}"
+}
+
+check() {
+  cd "$_root"
+  export CARGO_TARGET_DIR="$srcdir/target"
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$srcdir=/build --remap-path-prefix=$_root=/src --remap-path-prefix=$HOME=/home"
+  # Unit tests only: the compositor integration tests need a session.
+  cargo test --release --locked --workspace "${_unfinished[@]}" --lib --bins
+}
+
+package() {
+  cd "$_root"
+  CARGO_TARGET_DIR="$srcdir/target" DESTDIR="$pkgdir" PREFIX=/usr SYSCONFDIR=/etc scripts/install.sh
+}

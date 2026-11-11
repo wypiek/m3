@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Music
+GenericName=Music Player
+Comment=Play the music in your Music folder
+Exec=m3-music %U
+Icon=multimedia-audio-player
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/mp4;audio/x-wav;
+Keywords=music;player;audio;songs;album;
+StartupNotify=true
+DBusActivatable=false

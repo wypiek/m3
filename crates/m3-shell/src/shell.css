@@ -1,0 +1,379 @@
+/* ---- m3-shell (Material 3 Expressive) ------------------------------------ */
+
+window.m3-panel-window, window.m3-launcher-window, window.m3-wallpaper {
+  background-color: transparent;
+}
+
+/* Panel: a floating, fully rounded toolbar. */
+.m3-panel {
+  background-color: var(--m3-panel-bg);
+  padding: 0 6px;
+  color: var(--m3-on-surface);
+}
+.m3-panel.floating {
+  border-radius: var(--m3-radius-full);
+  box-shadow: var(--m3-shadow-2);
+}
+.m3-panel button {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
+  color: var(--m3-on-surface);
+}
+.m3-panel button:active { border-radius: var(--m3-radius-m); }
+
+/* The launcher button is an expressive shape (m3-widgets) that morphs. */
+.m3-panel button.m3-launcher-button, .m3-panel button.m3-launcher-button:hover, .m3-panel button.m3-launcher-button:active {
+  padding: 0;
+  min-width: 40px;
+  min-height: 40px;
+  background: none;
+}
+.m3-launcher-button .m3-shape { color: var(--m3-primary); }
+.m3-launcher-button .m3-shape-icon > label { color: var(--m3-on-primary); }
+.m3-launcher-button:hover .m3-shape { color: var(--m3-primary-fixed-dim); }
+.m3-launcher-button .m3-icon { font-variation-settings: "FILL" 1, "wght" 600, "GRAD" 0, "opsz" 24; }
+
+/* Workspace indicators: the active one is a wide primary pill with its
+ * number; occupied ones are filled dots; empty ones are hollow rings. */
+.m3-workspaces {
+  padding: 4px 6px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+}
+.m3-panel button.m3-ws {
+  min-width: 10px;
+  min-height: 10px;
+  padding: 0;
+  margin: 0;
+  border-radius: var(--m3-radius-full);
+  border: 2px solid var(--m3-outline);
+  background-color: transparent;
+  transition: min-width var(--m3-dur-default-spatial) var(--m3-ease-default-spatial),
+              min-height var(--m3-dur-default-spatial) var(--m3-ease-default-spatial),
+              background-color var(--m3-dur-short) var(--m3-ease-effects);
+}
+.m3-panel button.m3-ws.occupied {
+  border-color: var(--m3-on-surface-variant);
+  background-color: var(--m3-on-surface-variant);
+}
+.m3-panel button.m3-ws.active {
+  min-width: 44px;
+  min-height: 26px;
+  border-color: var(--m3-primary);
+  background-color: var(--m3-primary);
+  color: var(--m3-on-primary);
+}
+.m3-panel button.m3-ws.active label { font-weight: 700; }
+.m3-panel button.m3-ws:hover:not(.active) { border-color: var(--m3-primary); }
+
+/* Tasks: rounded squares that become rounder when pressed. */
+.m3-panel button.m3-task {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 4px;
+  border-radius: var(--m3-radius-m);
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial),
+              background-color var(--m3-dur-short) var(--m3-ease-effects);
+}
+.m3-panel button.m3-task.focused { background-color: var(--m3-secondary-container); border-radius: var(--m3-radius-l); }
+.m3-panel button.m3-task:active { border-radius: var(--m3-radius-full); }
+.m3-task-indicator {
+  min-width: 6px;
+  min-height: 3px;
+  margin-bottom: 1px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-on-surface-variant);
+  transition: min-width var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+.m3-task-indicator.focused { min-width: 16px; background-color: var(--m3-primary); }
+
+.m3-panel .m3-clock-button { padding: 0 16px; border-radius: var(--m3-radius-full); }
+.m3-panel .m3-clock-button:checked { background-color: var(--m3-secondary-container); color: var(--m3-on-secondary-container); }
+.m3-clock { font-feature-settings: "tnum" 1; font-weight: 600; }
+.m3-calendar-sheet { padding: 20px; min-width: 320px; }
+calendar {
+  border: none;
+  background-color: transparent;
+  color: var(--m3-on-surface);
+}
+calendar > header { border: none; background: none; }
+calendar > grid > label.day-number { border-radius: var(--m3-radius-full); min-width: 38px; min-height: 38px; }
+calendar > grid > label.today { color: var(--m3-primary); font-weight: 700; }
+calendar > grid > label:selected { background-color: var(--m3-primary); color: var(--m3-on-primary); border-radius: var(--m3-radius-m); }
+calendar > grid > label.other-month { color: var(--m3-disabled-content); }
+
+/* Launcher: a very round sheet. */
+.m3-launcher-scrim { background-color: var(--m3-scrim-color); }
+.m3-launcher {
+  margin: 48px;
+  padding: 24px;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface-container);
+  box-shadow: var(--m3-shadow-3);
+}
+.m3-section-label { color: var(--m3-primary); margin: 12px 12px 0 12px; }
+.m3-app-tile { padding: 14px 4px 10px 4px; }
+.m3-launcher flowboxchild {
+  border-radius: var(--m3-radius-xl);
+  padding: 0;
+  transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
+              border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+.m3-launcher flowboxchild:hover { background-color: var(--m3-surface-container-highest); border-radius: var(--m3-radius-l); }
+.m3-launcher flowboxchild:active { border-radius: var(--m3-radius-m); }
+.m3-launcher flowboxchild:focus-visible {
+  background-color: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+.m3-launcher .m3-list > row { background-color: var(--m3-surface-container-high); }
+.m3-launcher .m3-list > row button { min-height: 56px; border-radius: inherit; padding: 0 16px; color: var(--m3-on-surface); }
+.m3-category-chips, .m3-history { border-spacing: 8px; }
+
+window.m3-transparent, window.m3-qs-window, window.m3-osd-window { background-color: transparent; }
+
+/* Panel status + bell */
+.m3-panel button.m3-status-button { padding: 0 14px; border-radius: var(--m3-radius-full); }
+.m3-panel button.m3-bell { padding: 0 8px; }
+.m3-panel .m3-badge { margin: -2px -6px 0 0; }
+
+/* Quick settings: a large, very round sheet. */
+.m3-quick-settings, .m3-notification-center {
+  padding: 20px;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface-container);
+  box-shadow: var(--m3-shadow-3);
+}
+.m3-qs-header { margin: 0 0 4px 4px; }
+.m3-qs-clock { color: var(--m3-on-surface); font-feature-settings: "tnum" 1; }
+.m3-qs-battery { color: var(--m3-primary); margin-top: 4px; }
+.m3-qs-actions > button, .m3-qs-actions > menubutton > button { min-width: 48px; min-height: 48px; padding: 0; }
+menubutton.m3-qs-power > button {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  margin-left: 6px;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-primary);
+  color: var(--m3-on-primary);
+}
+menubutton.m3-qs-power > button:hover { background-image: linear-gradient(var(--m3-on-primary-hover), var(--m3-on-primary-hover)); }
+menubutton.m3-qs-power > button:checked { border-radius: var(--m3-radius-full); }
+
+/* Tiles: pills when off; when on they turn primary and square off with a
+ * spring. The icon container morphs circle → square in step (m3-widgets). */
+.m3-tile {
+  min-height: 72px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface);
+  transition: background-color var(--m3-dur-default-effects) var(--m3-ease-default-effects),
+              border-radius var(--m3-dur-default-spatial) var(--m3-ease-default-spatial),
+              transform var(--m3-dur-fast-spatial) var(--m3-ease-fast-spatial);
+}
+.m3-tile.active {
+  background-color: var(--m3-primary);
+  color: var(--m3-on-primary);
+  border-radius: var(--m3-radius-li);
+}
+.m3-tile:active { border-radius: var(--m3-radius-l); }
+.m3-tile button.m3-tile-main, .m3-tile button.m3-tile-more {
+  min-height: 72px;
+  padding: 0 12px 0 16px;
+  border-radius: inherit;
+  background-color: transparent;
+  color: inherit;
+}
+.m3-tile button.m3-tile-more { padding: 0 12px 0 6px; min-width: 40px; }
+.m3-tile button.m3-tile-main:checked { background-color: transparent; color: inherit; }
+.m3-tile button.m3-tile-main:hover, .m3-tile button.m3-tile-more:hover { background-color: var(--m3-on-surface-hover); }
+.m3-tile.active button.m3-tile-main:hover, .m3-tile.active button.m3-tile-more:hover { background-color: var(--m3-on-primary-hover); }
+.m3-tile.active label { color: var(--m3-on-primary); }
+.m3-tile .m3-tile-icon .m3-shape { color: var(--m3-surface-container-lowest); }
+.m3-tile .m3-tile-icon > label { color: var(--m3-on-surface-variant); }
+.m3-tile.active .m3-tile-icon .m3-shape { color: var(--m3-on-primary); }
+.m3-tile.active .m3-tile-icon > label { color: var(--m3-primary); }
+.m3-tile.active .m3-tile-more .m3-icon { color: var(--m3-on-primary); }
+.m3-tile .m3-label-large { font-weight: 600; }
+
+.m3-status-row {
+  min-height: 56px;
+  padding: 0 12px 0 20px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-highest);
+}
+.m3-slider-row { min-height: 56px; padding: 0 2px; }
+.m3-slider-row > button.icon { min-width: 48px; min-height: 48px; background-color: var(--m3-surface-container-highest); }
+.m3-slider-row dropdown > button { min-height: 40px; }
+/* The gap around the slider handle shows the sheet colour. */
+.m3-quick-settings scale > trough > slider { box-shadow: none; }
+.m3-qs-detail {
+  padding: 8px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface-container-high);
+}
+/* Network / device lists: grouped rows with shape icons. */
+.m3-qs-detail .m3-group > button.m3-qs-item {
+  min-height: 64px;
+  padding: 0 16px 0 10px;
+  background-color: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface);
+}
+.m3-qs-detail .m3-group > button.m3-qs-item:hover {
+  background-image: linear-gradient(var(--m3-on-surface-hover), var(--m3-on-surface-hover));
+}
+.m3-qs-detail .m3-group > button.m3-qs-item.active {
+  background-color: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
+}
+.m3-qs-item-icon .m3-shape { color: var(--m3-surface-container-lowest); }
+.m3-qs-item-icon > label { color: var(--m3-on-surface-variant); }
+button.m3-qs-item.active .m3-qs-item-icon .m3-shape { color: var(--m3-primary); }
+button.m3-qs-item.active .m3-qs-item-icon > label { color: var(--m3-on-primary); }
+button.m3-qs-item.active .m3-secondary-text { color: var(--m3-on-primary-container); }
+.m3-qs-detail .m3-group > .m3-qs-placeholder { min-height: 72px; background: none; }
+.m3-qs-detail { padding: 12px; }
+
+/* Notifications: grouped cards (2px gaps, small inner corners). */
+.m3-notification {
+  padding: 16px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface);
+}
+.m3-notification-center .m3-group > .m3-notification { border-radius: var(--m3-radius-xs); }
+.m3-notification-center .m3-group > .m3-notification:first-child {
+  border-top-left-radius: var(--m3-radius-xl);
+  border-top-right-radius: var(--m3-radius-xl);
+}
+.m3-notification-center .m3-group > .m3-notification:last-child {
+  border-bottom-left-radius: var(--m3-radius-xl);
+  border-bottom-right-radius: var(--m3-radius-xl);
+}
+.m3-notification.popup {
+  background-color: var(--m3-surface-container-high);
+  box-shadow: var(--m3-shadow-3);
+  margin: 4px 8px 8px 8px;
+}
+.m3-notification.critical {
+  background-color: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+}
+.m3-notification button.icon { min-width: 32px; min-height: 32px; background-color: var(--m3-surface-container); }
+.m3-notification-group { margin-bottom: 8px; }
+.m3-group-label { color: var(--m3-primary); margin: 4px 0 0 12px; }
+
+/* OSD: a pill with the icon on an expressive shape and a thick bar. */
+.m3-osd {
+  min-height: 64px;
+  padding: 0 24px 0 8px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+  box-shadow: var(--m3-shadow-3);
+  margin: 12px;
+}
+.m3-osd .m3-shape { color: var(--m3-primary); }
+.m3-osd .m3-shape-icon > label { color: var(--m3-on-primary); }
+.m3-osd label { min-width: 36px; font-feature-settings: "tnum" 1; }
+progressbar.m3-osd-bar > trough { min-height: 16px; border: none; border-radius: var(--m3-radius-full); background-color: var(--m3-secondary-container); }
+progressbar.m3-osd-bar > trough > progress {
+  min-height: 16px;
+  border: none;
+  border-radius: var(--m3-radius-full) var(--m3-radius-xs) var(--m3-radius-xs) var(--m3-radius-full);
+  background-color: var(--m3-primary);
+  background-image: none;
+}
+
+/* Overview */
+.m3-overview { padding: 48px; background-color: var(--m3-scrim-color); }
+.m3-overview-workspace {
+  padding: 12px;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface-container);
+  border: 3px solid transparent;
+  transition: border-color var(--m3-dur-short) var(--m3-ease-effects),
+              border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+.m3-overview-workspace.active { border-color: var(--m3-primary); border-radius: var(--m3-radius-xl); }
+.m3-overview-workspace.drop-target { border-color: var(--m3-tertiary); background-color: var(--m3-tertiary-container); }
+button.m3-overview-head { border-radius: var(--m3-radius-full); color: var(--m3-on-surface); }
+button.m3-overview-window {
+  min-height: 72px;
+  padding: 8px 12px;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface);
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+button.m3-overview-window.focused { background-color: var(--m3-primary-container); color: var(--m3-on-primary-container); border-radius: var(--m3-radius-xl); }
+button.m3-overview-window:hover { border-radius: var(--m3-radius-xl); }
+
+/* ---- motion --------------------------------------------------------------- */
+
+/* Launcher: app tiles rise in, staggered, when the sheet opens. */
+.m3-launcher.m3-enter-up flowboxchild { animation: m3-rise-in var(--m3-dur-default-spatial) var(--m3-ease-default-spatial) backwards; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(2) { animation-delay: 20ms; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(3) { animation-delay: 40ms; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(4) { animation-delay: 60ms; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(5) { animation-delay: 80ms; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(6) { animation-delay: 100ms; }
+.m3-launcher.m3-enter-up flowboxchild:nth-child(n+7) { animation-delay: 120ms; }
+
+/* Quick settings: tiles pop in one after another. */
+.m3-quick-settings.m3-enter .m3-tile { animation: m3-pop-in var(--m3-dur-default-spatial) var(--m3-ease-default-spatial) backwards; }
+.m3-quick-settings.m3-enter grid > .m3-tile:nth-child(2) { animation-delay: 25ms; }
+.m3-quick-settings.m3-enter grid > .m3-tile:nth-child(3) { animation-delay: 50ms; }
+.m3-quick-settings.m3-enter grid > .m3-tile:nth-child(4) { animation-delay: 75ms; }
+.m3-quick-settings.m3-enter grid > .m3-tile:nth-child(5) { animation-delay: 100ms; }
+.m3-quick-settings.m3-enter grid > .m3-tile:nth-child(6) { animation-delay: 125ms; }
+
+/* Tiles and panel buttons give springy press feedback. */
+.m3-tile:active { transform: scale(0.96); }
+
+/* Workspace overview cards rise in. */
+.m3-overview.m3-enter .m3-overview-workspace { animation: m3-rise-in var(--m3-dur-slow-spatial) var(--m3-ease-slow-spatial) backwards; }
+.m3-overview.m3-enter .m3-overview-workspace:nth-child(2) { animation-delay: 40ms; }
+.m3-overview.m3-enter .m3-overview-workspace:nth-child(3) { animation-delay: 80ms; }
+.m3-overview.m3-enter .m3-overview-workspace:nth-child(n+4) { animation-delay: 120ms; }
+
+/* Region screenshot selector */
+.m3-screenshot-area { color: var(--m3-primary); }
+.m3-screenshot-hint {
+  padding: 10px 20px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-inverse-surface);
+  color: var(--m3-inverse-on-surface);
+}
+
+/* ---- Panel: islands (each module its own floating pill) -------------------- */
+.m3-panel.islands, .m3-panel.islands.floating { background: none; box-shadow: none; padding: 0; }
+.m3-panel.islands > box { border-spacing: 10px; }
+.m3-panel.islands > box > * {
+  background-color: var(--m3-on-primary-fixed);
+  color: var(--m3-primary-fixed);
+  border-radius: var(--m3-radius-full);
+  box-shadow: var(--m3-shadow-2);
+}
+.m3-panel.islands > box > button,
+.m3-panel.islands > box > menubutton > button { color: var(--m3-primary-fixed); }
+.m3-panel.islands .m3-icon { color: var(--m3-primary-fixed); }
+.m3-panel.islands > box > .m3-workspaces { padding: 8px 10px; }
+.m3-panel.islands > box > .m3-tasks { padding: 2px 6px; }
+.m3-panel.islands > box > button.m3-launcher-button { background: none; box-shadow: none; }
+.m3-panel.islands button.m3-status-button,
+.m3-panel.islands .m3-clock-button > button { min-height: 44px; padding: 0 18px; }
+.m3-panel.islands button.m3-bell { min-width: 44px; min-height: 44px; }
+menubutton.m3-power-button > button { min-width: 44px; min-height: 44px; padding: 0; }
+button.m3-panel-search {
+  min-height: 44px;
+  min-width: 150px;
+  padding: 0 22px 0 16px;
+  color: var(--m3-primary-fixed);
+}
+.m3-panel.islands button.m3-task.focused { background-color: var(--m3-on-primary-fixed-variant); }
+.m3-panel.islands .m3-task-indicator { background-color: var(--m3-primary-fixed-dim); }
+.m3-panel.islands .m3-task-indicator.focused { background-color: var(--m3-tertiary-fixed-dim); }
+.m3-panel.islands button.m3-ws { border-color: var(--m3-primary-fixed-dim); }
+.m3-panel.islands button.m3-ws.occupied { background-color: var(--m3-primary-fixed-dim); border-color: var(--m3-primary-fixed-dim); }
+.m3-panel.islands button.m3-ws.active { background-color: var(--m3-tertiary-fixed-dim); border-color: var(--m3-tertiary-fixed-dim); color: var(--m3-on-tertiary-fixed); }

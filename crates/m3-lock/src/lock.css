@@ -1,0 +1,100 @@
+/* ---- m3-lock (Material 3 Expressive) ------------------------------------- */
+
+window.m3-lock { background-color: var(--m3-surface-container-lowest); }
+.m3-lock-fallback {
+  background-image: linear-gradient(160deg, var(--m3-surface-container-low), var(--m3-primary-container));
+}
+.m3-lock-scrim { background-color: var(--m3-scrim-color); }
+
+/* A huge, heavy, rounded clock (Google Sans Flex: weight, width, ROND). */
+.m3-lock-time {
+  font-size: 128px;
+  font-weight: 700;
+  letter-spacing: -3px;
+  color: var(--m3-primary-fixed);
+  font-feature-settings: "tnum" 1;
+  font-variation-settings: "wght" 700, "wdth" 112, "ROND" 100;
+}
+.m3-lock-date { color: var(--m3-on-surface); }
+.m3-lock-card {
+  padding: 32px 28px 28px 28px;
+  min-width: 380px;
+  border-radius: var(--m3-radius-xxl);
+  background-color: var(--m3-surface-container);
+  box-shadow: var(--m3-shadow-3);
+}
+.m3-lock-avatar-shape { margin-bottom: 4px; }
+.m3-lock-avatar-shape > label { font-size: 48px; font-weight: 700; font-variation-settings: "ROND" 100; }
+.m3-lock-avatar { margin-bottom: 4px; }
+window.m3 entry.m3-lock-entry, window.m3 passwordentry.m3-lock-entry {
+  min-height: 56px;
+  border-radius: var(--m3-radius-full);
+  border: none;
+  background-color: var(--m3-surface-container-highest);
+  padding: 0 24px;
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial),
+              background-color var(--m3-dur-short) var(--m3-ease-effects);
+}
+window.m3 passwordentry.m3-lock-entry:focus-within { box-shadow: inset 0 0 0 2px var(--m3-primary); }
+passwordentry.m3-lock-entry.error {
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+}
+/* The unlock button: a primary rounded square that turns round on press. */
+.m3 button.m3-lock-go, .m3 button.m3-lock-go:hover {
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-primary);
+  color: var(--m3-on-primary);
+  box-shadow: none;
+}
+.m3 button.m3-lock-go:active { border-radius: var(--m3-radius-full); }
+.m3 button.m3-lock-go .m3-loading-indicator { color: var(--m3-on-primary); }
+.m3-lock-caps { color: var(--m3-tertiary); }
+.m3-lock-message { color: var(--m3-on-surface-variant); }
+.m3-lock-message.error { color: var(--m3-error); font-weight: 600; }
+
+/* ---- customisable extras (lock.toml) ---------------------------------- */
+
+/* Text over photos stays readable. */
+.m3-lock-clock label { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+
+.m3-lock-owner-message {
+  padding: 12px 20px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+}
+
+/* Now playing: a tonal pill with the cover and two controls. */
+.m3-lock-media {
+  min-width: 340px;
+  padding: 8px 8px 8px 8px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+  box-shadow: var(--m3-shadow-2);
+}
+image.m3-lock-media-art { border-radius: var(--m3-radius-full); min-width: 48px; min-height: 48px; }
+.m3-lock-media button.icon { min-width: 48px; min-height: 48px; color: var(--m3-on-surface-variant); }
+.m3 .m3-lock-media button.m3-lock-media-play, .m3 .m3-lock-media button.m3-lock-media-play:hover {
+  background-color: var(--m3-primary);
+  color: var(--m3-on-primary);
+  border-radius: var(--m3-radius-l);
+}
+.m3 .m3-lock-media button.m3-lock-media-play:active { border-radius: var(--m3-radius-full); }
+
+.m3-lock-battery {
+  padding: 6px 14px 6px 10px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+}
+
+.m3-lock-preview-hint {
+  padding: 8px 18px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-inverse-surface);
+  color: var(--m3-inverse-on-surface);
+}

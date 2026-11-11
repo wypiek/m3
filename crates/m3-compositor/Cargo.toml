@@ -1,0 +1,53 @@
+[package]
+name = "m3-compositor"
+description = "m3 — the Material 3 Expressive Wayland compositor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "m3"
+path = "src/main.rs"
+
+[dependencies]
+m3-core.workspace = true
+m3-protocol.workspace = true
+m3-theme.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+rustix.workspace = true
+bitflags = "2.10"
+xcursor = "0.3.10"
+png = "0.18.0"
+smithay-drm-extras = { version = "0.1.0", default-features = false }
+libdisplay-info = "0.3.0"
+
+[dependencies.smithay]
+version = "0.7.0"
+default-features = false
+features = [
+    "backend_winit",
+    "backend_egl",
+    "backend_drm",
+    "backend_gbm",
+    "backend_libinput",
+    "backend_udev",
+    "backend_session_libseat",
+    "desktop",
+    "renderer_gl",
+    "renderer_multi",
+    "wayland_frontend",
+    "xwayland",
+]
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

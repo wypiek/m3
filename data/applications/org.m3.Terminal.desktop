@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+GenericName=Terminal
+Comment=Use the command line
+Exec=m3-terminal
+Icon=utilities-terminal
+Terminal=false
+Categories=System;TerminalEmulator;GTK;
+Keywords=shell;prompt;command;commandline;cmd;console;
+StartupNotify=true
+X-GNOME-UsesNotifications=false
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=m3-terminal

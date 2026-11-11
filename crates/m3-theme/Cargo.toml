@@ -1,0 +1,21 @@
+[package]
+name = "m3-theme"
+description = "Material 3 colour engine and design tokens for m3"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+m3-core.workspace = true
+material-colors = { version = "0.5.0", features = ["quantize"] }
+serde_json.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

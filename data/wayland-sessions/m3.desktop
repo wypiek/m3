@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=m3
+Comment=The m3 Material 3 Expressive desktop
+Exec=m3-session
+TryExec=m3-session
+Type=Application
+DesktopNames=m3
+Keywords=wayland;material;desktop;
