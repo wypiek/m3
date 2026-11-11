@@ -29,11 +29,14 @@ for pair in m3-terminal:Terminal m3-music:Music m3-files:Files m3-browser:Browse
 done
 install -Dm644 "$ROOT/data/wayland-sessions/m3.desktop" "$DESTDIR$PREFIX/share/wayland-sessions/m3.desktop"
 if [ -x "$TARGET/m3-files" ]; then
-    # "Show in folder" from browsers and other apps opens m3-files.
+    # "Show in folder" from browsers and other apps opens m3-files. Our own
+    # file name, so it never collides with other file managers' activation
+    # files (e.g. Nautilus ships org.freedesktop.FileManager1.service); a
+    # running m3-files owns the bus name either way.
     install -d "$DESTDIR$PREFIX/share/dbus-1/services"
     sed "s|/usr/bin/m3-files|$PREFIX/bin/m3-files|" "$ROOT/data/dbus-1/services/org.freedesktop.FileManager1.service" \
-        > "$DESTDIR$PREFIX/share/dbus-1/services/org.freedesktop.FileManager1.service"
-    chmod 644 "$DESTDIR$PREFIX/share/dbus-1/services/org.freedesktop.FileManager1.service"
+        > "$DESTDIR$PREFIX/share/dbus-1/services/org.m3.Files.FileManager1.service"
+    chmod 644 "$DESTDIR$PREFIX/share/dbus-1/services/org.m3.Files.FileManager1.service"
 fi
 for app in "${apps[@]}"; do
     install -Dm644 "$ROOT/data/applications/org.m3.$app.desktop" "$DESTDIR$PREFIX/share/applications/org.m3.$app.desktop"
