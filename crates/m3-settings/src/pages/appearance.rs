@@ -177,7 +177,7 @@ pub fn build(ctx: &Rc<Ctx>) -> gtk::Widget {
     let presets_row = gtk::FlowBox::new();
     presets_row.set_selection_mode(gtk::SelectionMode::None);
     presets_row.set_max_children_per_line(8);
-    presets_row.set_min_children_per_line(4);
+    presets_row.set_min_children_per_line(2);
     for (id, label, hex) in PRESETS {
         let b = gtk::Button::new();
         b.add_css_class("m3-swatch-button");
@@ -406,7 +406,8 @@ pub fn build(ctx: &Rc<Ctx>) -> gtk::Widget {
     let grid = gtk::FlowBox::new();
     grid.set_selection_mode(gtk::SelectionMode::None);
     grid.set_max_children_per_line(4);
-    grid.set_min_children_per_line(3);
+    // One per line on narrow windows; the grid must not hold the window wide.
+    grid.set_min_children_per_line(1);
     grid.set_column_spacing(8);
     grid.set_row_spacing(8);
     grid.add_css_class("m3-wallpaper-grid");

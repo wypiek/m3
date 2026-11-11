@@ -262,8 +262,16 @@ storage = true
 system = true                # RAM and CPU
 
 [countdown]
+enabled = true
 title = "Summer holiday"     # empty hides the countdown
 date = "2027-07-01"
+
+# Written when you move or resize widgets (right-click the desktop → Edit
+# widgets): top-left corner as a fraction of the desktop, and a size factor.
+[layout.clock]
+x = 0.06
+y = 0.3
+scale = 1.2
 
 [weather]
 enabled = true

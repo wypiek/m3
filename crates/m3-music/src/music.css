@@ -64,7 +64,7 @@ image.m3-detail-cover { border-radius: var(--m3-radius-xxl); background-color: v
 
 /* Floating now-playing bar (album colours via .m3-art-scheme). */
 .m3-np-bar {
-  min-width: 560px;
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
   padding: 8px 10px 8px 8px;
   border-radius: var(--m3-radius-xl);
   background-color: var(--m3-primary-container);
@@ -120,3 +120,28 @@ listview.m3-music-list > row:last-child { border-bottom-left-radius: var(--m3-ra
 .m3-music-detail list.m3-list > row:first-child { border-top-left-radius: var(--m3-radius-xl); border-top-right-radius: var(--m3-radius-xl); }
 .m3-music-detail list.m3-list > row:last-child { border-bottom-left-radius: var(--m3-radius-xl); border-bottom-right-radius: var(--m3-radius-xl); }
 .m3-music-detail list.m3-list > row:hover { background-color: var(--m3-surface-container-high); }
+
+/* ---- Responsive (window classes set from the width) ----------------------- */
+window.m3-music-window.compact .m3-np-bar { min-width: 0; }
+window.m3-music-window.compact scrolledwindow.m3-music-scroll { margin: 0 8px; }
+window.m3-music-window.compact listview.m3-music-list > row { padding: 0 12px 0 8px; min-height: 64px; }
+window.m3-music-window.compact .m3-music-detail { padding: 12px 16px 120px 16px; }
+window.m3-music-window.compact .m3-np-col { margin-bottom: 24px; }
+window.m3-music-window.compact .m3-np-title { font-size: 28px; }
+window.m3-music-window.tiny .m3-np-bar { padding: 6px 6px 6px 6px; }
+window.m3-music-window.compact headerbar .m3-button-group > button { padding: 0 12px; }
+
+/* ---- Polish ---------------------------------------------------------------- */
+/* Song rows: covers on expressive soft squares that round off on hover. */
+image.m3-row-cover {
+  border-radius: var(--m3-radius-l);
+  transition: border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+listview.m3-music-list > row:hover image.m3-row-cover { border-radius: var(--m3-radius-full); }
+.m3-song-row.current image.m3-row-cover { border-radius: var(--m3-radius-full); }
+.m3-song-title { font-weight: 550; }
+/* Album tiles: cover, then emphasized title. */
+.m3-album-tile { padding-bottom: 4px; }
+/* Empty / scanning states breathe a little. */
+.m3-music-empty { padding: 48px 24px; }
+.m3-music-empty .m3-headline-medium-emphasized { margin-top: 8px; }

@@ -42,6 +42,7 @@ impl Panel {
         tray_handle: Option<m3_services::tray::TrayHandle>,
     ) -> Rc<Self> {
         crate::placement::set_panel_position(cfg.position);
+        SIZE_CSS.with(|p| p.load_from_string(&panel_css(cfg.size)));
         let window = gtk::Window::builder().application(app).decorated(false).build();
         window.init_layer_shell();
         window.set_layer(Layer::Top);
@@ -103,7 +104,9 @@ impl Panel {
         for (container, modules) in [(&start, &cfg.start), (&center, &cfg.center), (&end, &cfg.end)] {
             for m in modules {
                 match m {
-                    PanelModule::Launcher => container.append(&launcher_button(dispatch.clone())),
+                    PanelModule::Launcher => {
+                        container.append(&launcher_button(dispatch.clone(), island_size(cfg.size)))
+                    }
                     PanelModule::Workspaces => {
                         let b = gtk::Box::new(orientation, 6);
                         b.add_css_class("m3-workspaces");
@@ -573,14 +576,54 @@ fn power_button(dispatch: Rc<dyn Fn(Cmd)>) -> gtk::MenuButton {
     button
 }
 
-fn launcher_button(dispatch: Rc<dyn Fn(Cmd)>) -> gtk::Button {
+/// Height of a panel pill for a panel of `size` px (pure; tested).
+pub fn island_size(size: u32) -> i32 {
+    (size as i32 - 4).clamp(24, 72)
+}
+
+/// Sizes of everything in the panel follow its height, so a slim panel
+/// doesn't clip and a tall one doesn't look sparse.
+fn panel_css(size: u32) -> String {
+    let h = island_size(size);
+    let icon = ((h as f64) * 0.5).round().clamp(16.0, 28.0);
+    let pad = ((h as f64) * 0.38).round();
+    let text = ((h as f64) * 0.32).round().clamp(11.0, 18.0);
+    format!(
+        ".m3-panel button, .m3-panel menubutton > button {{ min-height: {h}px; min-width: {h}px; }}\n\
+         .m3-panel.islands > box > * {{ min-height: {h}px; }}\n\
+         .m3-panel .m3-icon {{ font-size: {icon}px; }}\n\
+         .m3-panel button.m3-status-button, .m3-panel .m3-clock-button > button {{ padding: 0 {pad}px; }}\n\
+         .m3-panel button.m3-panel-search {{ min-width: {}px; padding: 0 {pad}px; }}\n\
+         .m3-panel .m3-clock, .m3-panel button.m3-panel-search label {{ font-size: {text}px; }}\n\
+         .m3-panel button.m3-ws {{ min-height: 10px; min-width: 10px; }}\n\
+         .m3-panel button.m3-ws.active {{ min-height: {}px; min-width: {}px; }}\n\
+         .m3-panel button.m3-task {{ min-width: {}px; }}\n",
+        h * 3,
+        (h * 6 / 10).max(16),
+        h,
+        h + 4,
+    )
+}
+
+thread_local! {
+    static SIZE_CSS: gtk::CssProvider = {
+        let p = gtk::CssProvider::new();
+        if let Some(d) = gdk::Display::default() {
+            // Above the theme stylesheet.
+            gtk::style_context_add_provider_for_display(&d, &p, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+        }
+        p
+    };
+}
+
+fn launcher_button(dispatch: Rc<dyn Fn(Cmd)>, size: i32) -> gtk::Button {
     use m3_widgets::Shape;
     // An expressive cookie shape that morphs on hover and press.
     let b = gtk::Button::new();
     b.set_tooltip_text(Some("Applications"));
     b.update_property(&[gtk::accessible::Property::Label("Applications")]);
     b.add_css_class("m3-launcher-button");
-    let icon = m3_widgets::ShapeIcon::new(Shape::Cookie(9), "apps", 40, true);
+    let icon = m3_widgets::ShapeIcon::new(Shape::Cookie(9), "apps", size, true);
     m3_widgets::morph_on_interaction(&b, icon.shape(), Shape::Cookie(9), Shape::Sunny(8), Shape::Clover(4));
     b.set_child(Some(icon.widget()));
     b.connect_clicked(move |_| dispatch(Cmd::ToggleLauncher));
@@ -798,5 +841,18 @@ pub fn set_pinned(id: &str, pin: bool) {
     }
     if let Err(e) = cfg::save(&dir, &c) {
         tracing::warn!("cannot save panels.toml: {e}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pills_fit_the_panel() {
+        assert_eq!(island_size(48), 44);
+        assert_eq!(island_size(20), 24);
+        assert_eq!(island_size(120), 72);
+        assert!(panel_css(36).contains("min-height: 32px"));
     }
 }

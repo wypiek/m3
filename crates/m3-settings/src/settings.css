@@ -21,20 +21,94 @@ window.m3.m3-settings-window { background-color: var(--m3-surface-container); }
   transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
               border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
 }
+.m3-navigation-drawer row.m3-nav-item:hover { background-color: var(--m3-on-surface-hover); }
 .m3-navigation-drawer row.m3-nav-item:active { border-radius: var(--m3-radius-l); }
 .m3-navigation-drawer row.m3-nav-item:selected {
   background-color: var(--m3-secondary-container);
   color: var(--m3-on-secondary-container);
 }
+.m3-navigation-drawer row.m3-nav-item:selected .m3-nav-label { font-weight: 700; }
 .m3-navigation-drawer row.m3-nav-item:selected .m3-icon {
   color: var(--m3-on-secondary-container);
   font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
 }
+.m3-nav-indicator { border-radius: var(--m3-radius-full); }
+
+/* Navigation rail (medium / narrow windows): the selection is an indicator
+ * pill around the icon, labels sit underneath. */
+window.medium .m3-settings-side, window.narrow .m3-settings-side { padding: 4px 4px 12px 8px; }
+window.medium .m3-navigation-drawer row.m3-nav-item, window.narrow .m3-navigation-drawer row.m3-nav-item {
+  min-height: 0;
+  padding: 6px 0;
+  margin: 2px 0;
+  border-radius: var(--m3-radius-l);
+}
+window.medium .m3-navigation-drawer row.m3-nav-item:selected,
+window.narrow .m3-navigation-drawer row.m3-nav-item:selected,
+window.medium .m3-navigation-drawer row.m3-nav-item:hover,
+window.narrow .m3-navigation-drawer row.m3-nav-item:hover { background: none; }
+window.medium .m3-nav-indicator, window.narrow .m3-nav-indicator {
+  min-width: 56px;
+  min-height: 32px;
+  transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
+              min-width var(--m3-dur-medium) var(--m3-ease-spatial);
+}
+window.medium row.m3-nav-item:hover .m3-nav-indicator,
+window.narrow row.m3-nav-item:hover .m3-nav-indicator { background-color: var(--m3-on-surface-hover); }
+window.medium row.m3-nav-item:selected .m3-nav-indicator,
+window.narrow row.m3-nav-item:selected .m3-nav-indicator {
+  min-width: 64px;
+  background-color: var(--m3-secondary-container);
+}
+window.medium .m3-nav-label, window.narrow .m3-nav-label { font-size: 12px; font-weight: 500; }
+menubutton.m3-rail-search > button {
+  min-width: 56px;
+  min-height: 56px;
+  margin: 4px 0 8px 0;
+  padding: 0;
+  border-radius: var(--m3-radius-l);
+  background-color: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+}
+menubutton.m3-rail-search > button:checked { border-radius: var(--m3-radius-full); }
+menubutton.m3-rail-search popover > contents { padding: 8px; }
+menubutton.m3-rail-search popover entry.m3-search { min-width: 260px; }
 .m3-settings-side .m3-search { min-height: 52px; background-color: var(--m3-surface-container-highest); }
 
 /* Pages */
-.m3-settings-page { padding: 40px 32px 72px 32px; }
-.m3-page-title { color: var(--m3-on-surface); margin-bottom: 4px; }
+.m3-settings-page { padding: 36px 32px 72px 32px; }
+.m3-page-header { margin-bottom: 8px; }
+.m3-page-title { color: var(--m3-on-surface); }
+.m3-page-badge .m3-shape { color: var(--m3-primary-container); }
+.m3-page-badge > label {
+  color: var(--m3-on-primary-container);
+  font-size: 30px;
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 40;
+}
+
+/* Scroll edges fade into the pane instead of cutting content off. */
+scrolledwindow.m3-settings-scroll > undershoot.top {
+  background: linear-gradient(to bottom, var(--m3-surface), transparent);
+  background-size: 100% 28px;
+  background-repeat: no-repeat;
+  background-position: top;
+}
+scrolledwindow.m3-settings-scroll > undershoot.bottom {
+  background: linear-gradient(to top, var(--m3-surface), transparent);
+  background-size: 100% 28px;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+/* Medium: a bit tighter. Narrow: compact page, smaller title, stacked rows. */
+window.medium .m3-settings-page { padding: 28px 24px 56px 24px; }
+window.narrow .m3-settings-page { padding: 20px 12px 48px 12px; }
+window.narrow .m3-settings-pane { margin: 0 6px 6px 0; border-radius: var(--m3-radius-xl); }
+window.narrow .m3-page-title { font-size: 26px; line-height: 32px; }
+window.narrow .m3-page-header { margin-bottom: 4px; }
+window.narrow .m3-settings-row { padding: 10px 14px 10px 16px; }
+window.narrow .m3-card-title { margin-left: 12px; }
+.m3-settings-row.stacked { padding-top: 14px; padding-bottom: 14px; }
 .m3-card-title { margin: 20px 0 2px 20px; color: var(--m3-primary); }
 
 /* Grouped settings rows: segments on surface-container. */
@@ -42,6 +116,7 @@ window.m3.m3-settings-window { background-color: var(--m3-surface-container); }
 .m3-settings-row { min-height: 72px; padding: 10px 16px 10px 24px; }
 .m3-row-title { color: var(--m3-on-surface); }
 .m3-settings-row scale { min-width: 220px; }
+window.narrow .m3-settings-row scale { min-width: 160px; }
 .m3-note { margin: 0 20px; }
 .m3-scheme-preview { padding: 4px 0; }
 

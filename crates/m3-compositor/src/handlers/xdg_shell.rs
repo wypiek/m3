@@ -180,6 +180,36 @@ impl XdgShellHandler for State {
         }
     }
 
+    fn show_window_menu(
+        &mut self,
+        surface: ToplevelSurface,
+        _seat: smithay::reexports::wayland_server::protocol::wl_seat::WlSeat,
+        _serial: smithay::utils::Serial,
+        location: smithay::utils::Point<i32, smithay::utils::Logical>,
+    ) {
+        // The shell draws the menu; tell it which window and where.
+        let Some(w) = self.m3.shell.window_for_surface(surface.wl_surface()) else { return };
+        let Some(ws) = self.m3.shell.workspace_of(&w) else { return };
+        let Some(win_loc) = self.m3.shell.workspaces[ws].space.element_location(&w) else { return };
+        let global = (win_loc + location).to_f64();
+        let output = self.m3.shell.output_at(global).cloned();
+        let origin = output.as_ref().and_then(|o| self.m3.shell.output_geometry(o)).map(|g| g.loc).unwrap_or_default();
+        let (maximized, fullscreen) = {
+            let st = crate::shell::WindowExt::st(&w);
+            (st.maximized, st.fullscreen)
+        };
+        self.m3.ipc_event(m3_protocol::Event::WindowMenu {
+            id: crate::shell::WindowExt::id(&w),
+            output: output.map(|o| o.name()),
+            x: global.x - f64::from(origin.x),
+            y: global.y - f64::from(origin.y),
+            maximized,
+            fullscreen,
+            // 1-based, like WorkspaceInfo::index.
+            workspace: ws + 1,
+        });
+    }
+
     fn minimize_request(&mut self, surface: ToplevelSurface) {
         if let Some(w) = self.m3.shell.window_for_surface(surface.wl_surface()) {
             self.minimize(&w);

@@ -1,57 +1,75 @@
 /* ---- m3-terminal (Material 3 Expressive) ---------------------------------- */
 
-/* The window, header and terminal share one surface. */
-window.m3.m3-terminal-window { background-color: var(--m3-surface); }
-.m3-terminal-header { min-height: 52px; padding: 0 8px 0 10px; }
-vte-terminal.m3-terminal { padding: 6px 14px 10px 14px; }
+/* The header sits on surface-container; the terminal is an inset, very
+ * round surface below it. */
+window.m3.m3-terminal-window { background-color: var(--m3-surface-container); }
+.m3-terminal-header { min-height: 56px; padding: 0 8px 0 8px; }
+.m3-terminal-surface {
+  margin: 0 8px 8px 8px;
+  border-radius: var(--m3-radius-xl);
+  background-color: var(--m3-surface);
+}
+vte-terminal.m3-terminal { padding: 10px 16px 12px 16px; }
+window.m3.m3-terminal-window.maximized .m3-terminal-surface,
+window.m3.m3-terminal-window.fullscreen .m3-terminal-surface { margin: 0; border-radius: 0; }
 
-/* Pill tabs: the selected tab is a secondary-container pill; others are
- * quiet until hovered. Shapes morph with the expressive spring. */
-.m3-tab-strip { padding: 6px 2px; }
+/* The tab strip scrolls sideways without a visible scrollbar. */
+.m3-tab-scroll scrollbar { opacity: 0; min-height: 0; }
+.m3-tab-scroll undershoot.left, .m3-tab-scroll undershoot.right { background: none; }
+
+/* Pill tabs: the selected tab is a secondary-container pill; pressing
+ * squares it off with the expressive spring. */
+.m3-tab-strip { padding: 8px 4px; }
 .m3-tab {
   border-radius: var(--m3-radius-full);
   background-color: transparent;
   transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
               border-radius var(--m3-dur-medium) var(--m3-ease-spatial);
-  animation: m3-pop-in var(--m3-dur-default-spatial) var(--m3-ease-default-spatial);
 }
 .m3-tab:hover { background-color: var(--m3-on-surface-hover); }
 .m3-tab.selected {
   background-color: var(--m3-secondary-container);
   color: var(--m3-on-secondary-container);
+  border-radius: var(--m3-radius-l);
 }
 .m3-tab:active { border-radius: var(--m3-radius-m); }
 .m3 .m3-tab button.m3-tab-main {
-  min-height: 36px;
-  padding: 0 4px 0 16px;
+  min-height: 38px;
+  padding: 0 6px 0 14px;
   background: none;
   color: var(--m3-on-surface-variant);
   font-weight: 500;
   font-feature-settings: "liga" 0, "calt" 0;
 }
+.m3 .m3-tab button.m3-tab-main .m3-icon { color: inherit; font-size: 18px; }
 .m3 .m3-tab.selected button.m3-tab-main { color: var(--m3-on-secondary-container); font-weight: 650; }
+.m3 .m3-tab.selected button.m3-tab-main .m3-icon { font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 20; }
 .m3 .m3-tab button.m3-tab-main:active { transform: none; }
 .m3 .m3-tab button.m3-tab-close {
   min-width: 28px;
   min-height: 28px;
-  margin: 4px 6px 4px 0;
+  margin: 5px 6px 5px 0;
   color: var(--m3-on-surface-variant);
   opacity: 0.7;
 }
 .m3 .m3-tab.selected button.m3-tab-close { color: var(--m3-on-secondary-container); opacity: 1; }
 .m3 .m3-tab button.m3-tab-close:hover { opacity: 1; background-color: var(--m3-on-surface-hover); }
+
+/* New tab: a tonal rounded square that turns round on hover. */
 .m3 button.m3-new-tab {
   min-width: 40px;
   min-height: 40px;
-  background-color: var(--m3-surface-container-highest);
-  color: var(--m3-on-surface-variant);
-  border-radius: var(--m3-radius-l);
+  margin-left: 2px;
+  background-color: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
+  border-radius: var(--m3-radius-m);
 }
-.m3 button.m3-new-tab:hover { background-color: var(--m3-secondary-container); color: var(--m3-on-secondary-container); border-radius: var(--m3-radius-full); }
+.m3 button.m3-new-tab:hover { border-radius: var(--m3-radius-full); }
+.m3 button.m3-new-tab .m3-icon { color: inherit; }
 
 /* Find bar: a pill search field with a connected previous/next group. */
-.m3-terminal-search { padding: 4px 12px 8px 12px; }
-.m3 .m3-terminal-search entry.m3-search { min-height: 44px; }
+.m3-terminal-search { padding: 0 12px 8px 12px; }
+.m3 .m3-terminal-search entry.m3-search { min-height: 44px; min-width: 120px; background-color: var(--m3-surface-container-highest); }
 .m3 .m3-terminal-search entry.m3-search.error { box-shadow: inset 0 0 0 2px var(--m3-error); }
 .m3-terminal-search .m3-button-group > button { min-width: 44px; min-height: 44px; padding: 0; }
 

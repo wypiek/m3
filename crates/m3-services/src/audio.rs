@@ -70,6 +70,7 @@ pub enum AudioCmd {
     SetOutputMute(bool),
     SetInputVolume(f64),
     ToggleInputMute,
+    SetInputMute(bool),
     SetDefaultOutput(String),
     SetDefaultInput(String),
     SetStreamVolume { index: u32, volume: f64 },
@@ -279,12 +280,17 @@ fn run(rx: mpsc::Receiver<AudioCmd>, out: async_channel::Sender<AudioState>) -> 
                 }
                 AudioCmd::SetInputVolume(v) => {
                     if let Some(d) = st.input() {
-                        intro.set_source_volume_by_name(&d.name, &volume_for(d.channels, v), None);
+                        intro.set_source_volume_by_name(&d.name, &volume_for(d.channels, v.clamp(0.0, 1.0)), None);
                     }
                 }
                 AudioCmd::ToggleInputMute => {
                     if let Some(d) = st.input() {
                         intro.set_source_mute_by_name(&d.name, !d.muted, None);
+                    }
+                }
+                AudioCmd::SetInputMute(m) => {
+                    if let Some(d) = st.input() {
+                        intro.set_source_mute_by_name(&d.name, m, None);
                     }
                 }
                 AudioCmd::SetDefaultOutput(name) => {

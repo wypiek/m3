@@ -285,10 +285,11 @@ button.fab.tertiary { background-color: var(--m3-tertiary-container); color: var
   transition: background-color var(--m3-dur-short) var(--m3-ease-effects),
               border-color var(--m3-dur-short) var(--m3-ease-effects);
 }
+/* The on/off glyphs are hidden. A zero icon size makes GTK fail icon
+ * lookups (GTK-CRITICAL) and render zero-sized surfaces (pixman errors),
+ * so keep a small real size and hide them with opacity. */
 .m3 switch > image, .m3-layer switch > image {
-  -gtk-icon-size: 0;
-  min-width: 0;
-  min-height: 0;
+  -gtk-icon-size: 12px;
   margin: 0;
   opacity: 0;
 }
@@ -325,6 +326,8 @@ button.fab.tertiary { background-color: var(--m3-tertiary-container); color: var
   margin: 11px;
   border: 2px solid var(--m3-on-surface-variant);
   background-color: transparent;
+  background-image: none;
+  box-shadow: none;
   color: var(--m3-on-primary);
   transition: all var(--m3-dur-short) var(--m3-ease-effects);
 }
@@ -332,8 +335,11 @@ button.fab.tertiary { background-color: var(--m3-tertiary-container); color: var
 .m3 radio, .m3-layer radio { border-radius: 9999px; }
 .m3 check:checked, .m3-layer check:checked,
 .m3 check:indeterminate, .m3-layer check:indeterminate {
+  /* GTK's theme paints the checked fill as an image over the colour. */
+  background-image: none;
   background-color: var(--m3-primary);
   border-color: var(--m3-primary);
+  color: var(--m3-on-primary);
 }
 .m3 radio:checked, .m3-layer radio:checked {
   border-color: var(--m3-primary);
@@ -402,6 +408,8 @@ progressbar > trough {
   background-color: var(--m3-secondary-container);
 }
 progressbar > trough > progress {
+  /* Adwaita uses negative margins here (min width -2: GTK warning). */
+  margin: 0;
   min-height: 4px;
   border-radius: var(--m3-radius-full);
   background-color: var(--m3-primary);

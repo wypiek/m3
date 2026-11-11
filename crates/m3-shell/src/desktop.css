@@ -4,9 +4,6 @@
  * and light text (*-fixed, tone 90). */
 
 window.m3-desktop { background: none; }
-.m3-desktop-root { padding: 56px 72px 32px 72px; }
-.m3-desktop-start { margin-left: 64px; }
-.m3-desktop-end { margin-right: 48px; }
 
 /* Hero clock: heavy, wide, tight — two-tone digits. */
 .m3-desk-clock { margin-bottom: 8px; }
@@ -133,3 +130,32 @@ window.m3-desktop { background: none; }
 }
 .m3-desk-day-pill.rose { background-color: var(--m3-on-primary-fixed-variant); color: var(--m3-primary-fixed); }
 .m3-desk-day-pill.gold { background-color: var(--m3-on-tertiary-fixed-variant); color: var(--m3-tertiary-fixed); }
+
+/* ---- Edit mode (right-click the desktop → Edit widgets) ------------------- */
+window.m3-desktop.editing { background-color: rgba(0, 0, 0, 0.25); }
+.m3-desk-item { border-radius: var(--m3-radius-xl); transition: box-shadow var(--m3-dur-short) var(--m3-ease-effects); }
+window.m3-desktop.editing .m3-desk-item {
+  box-shadow: 0 0 0 2px var(--m3-primary-fixed-dim);
+  background-color: rgba(0, 0, 0, 0.12);
+}
+window.m3-desktop.editing .m3-desk-item.dragging { box-shadow: 0 0 0 3px var(--m3-tertiary-fixed-dim), var(--m3-shadow-3); }
+button.m3-desk-remove, button.m3-desk-resize {
+  min-width: 32px;
+  min-height: 32px;
+  margin: -6px;
+  padding: 0;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-primary-fixed);
+  color: var(--m3-on-primary-fixed);
+  box-shadow: var(--m3-shadow-2);
+}
+button.m3-desk-resize { background-color: var(--m3-tertiary-fixed); color: var(--m3-on-tertiary-fixed); }
+button.m3-desk-remove .m3-icon, button.m3-desk-resize .m3-icon { font-size: 18px; color: inherit; }
+.m3-desk-toolbar {
+  padding: 8px 8px 8px 20px;
+  border-radius: var(--m3-radius-full);
+  background-color: var(--m3-surface-container-high);
+  box-shadow: var(--m3-shadow-3);
+}
+.m3-desk-toolbar-title { margin-right: 8px; }
+.m3-desk-menu-note { padding: 12px 16px; }

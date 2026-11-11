@@ -187,6 +187,41 @@ pub struct Music {
     snackbar: gtk::Revealer,
     snack_label: gtk::Label,
     snack_timer: Rc<RefCell<Option<glib::SourceId>>>,
+
+    // Responsive layout
+    layout: Cell<Layout>,
+    /// Width of the monitor the window is on (`i32::MAX` until known).
+    monitor_width: Cell<i32>,
+    title: gtk::Label,
+    nav_labels: Vec<gtk::Label>,
+    search_toggle: gtk::Button,
+    np_body: gtk::Box,
+    np_col: gtk::Box,
+    dhead: gtk::Box,
+    bar_next: gtk::Button,
+    albums_grid: RefCell<Option<gtk::GridView>>,
+}
+
+/// Window width classes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Layout {
+    Wide,
+    /// Below 900 px: icon-only navigation, collapsed search, stacked views.
+    Compact,
+    /// Below 640 px: also no title or rescan button, minimal mini player.
+    Tiny,
+}
+
+impl Layout {
+    pub fn for_width(w: i32) -> Self {
+        if w < 640 {
+            Layout::Tiny
+        } else if w < 900 {
+            Layout::Compact
+        } else {
+            Layout::Wide
+        }
+    }
 }
 
 impl Music {
@@ -199,6 +234,7 @@ impl Music {
             .build();
         window.add_css_class("m3");
         window.add_css_class("m3-music-window");
+        window.set_size_request(360, 480);
 
         let art_css = gtk::CssProvider::new();
         if let Some(d) = gdk::Display::default() {
@@ -208,18 +244,23 @@ impl Music {
         // ---- header: title, navigation (connected button group), search
         let header = gtk::HeaderBar::new();
         let title = label("Music", &["m3-title-large-emphasized", "m3-music-title"]);
+        title.set_ellipsize(gtk::pango::EllipsizeMode::End);
         header.pack_start(&title);
         let nav_box = gtk::Box::new(gtk::Orientation::Horizontal, 2);
         nav_box.add_css_class("m3-button-group");
         let mut nav: Vec<gtk::ToggleButton> = Vec::new();
+        let mut nav_labels: Vec<gtk::Label> = Vec::new();
         for (_, name, ic) in VIEWS {
             let b = gtk::ToggleButton::new();
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
             let i = icon(ic);
             i.add_css_class("small");
             row.append(&i);
-            row.append(&gtk::Label::new(Some(name)));
+            let l = gtk::Label::new(Some(name));
+            row.append(&l);
+            nav_labels.push(l);
             b.set_child(Some(&row));
+            b.set_tooltip_text(Some(name));
             if let Some(first) = nav.first() {
                 b.set_group(Some(first));
             }
@@ -230,7 +271,12 @@ impl Music {
         let search = gtk::SearchEntry::new();
         search.set_placeholder_text(Some("Search music"));
         search.add_css_class("m3-search");
-        search.set_width_chars(22);
+        // Small minimum, comfortable natural width: never forces the window wide.
+        search.set_width_chars(6);
+        search.set_max_width_chars(22);
+        // Narrow windows: search collapses to this button.
+        let search_toggle = icon_button("search", "Search (Ctrl+F)");
+        search_toggle.set_visible(false);
         let scan_busy = gtk::Stack::new();
         let rescan = icon_button("refresh", "Rescan the music folder (Ctrl+R)");
         rescan.set_action_name(Some("win.rescan"));
@@ -242,6 +288,7 @@ impl Music {
         scan_busy.add_named(busy.widget(), Some("busy"));
         header.pack_end(&scan_busy);
         header.pack_end(&search);
+        header.pack_end(&search_toggle);
         window.set_titlebar(Some(&header));
 
         // ---- library views
@@ -257,11 +304,14 @@ impl Music {
         let artist_model = gtk::FilterListModel::new(Some(artist_store.clone()), Some(artist_filter.clone()));
 
         let views = gtk::Stack::new();
+        views.set_hhomogeneous(false);
         views.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
         views.set_transition_duration(280);
         views.set_vexpand(true);
 
         let content = gtk::Stack::new();
+        // Size to the visible page only (hidden pages must not widen the window).
+        content.set_hhomogeneous(false);
         content.set_transition_type(gtk::StackTransitionType::Crossfade);
         // "No matches" message over the filtered views.
         let no_results = label("", &["m3-title-medium", "m3-secondary-text", "m3-no-results"]);
@@ -331,6 +381,7 @@ impl Music {
         back.add_css_class("tonal");
         detail_inner.append(&back);
         let dhead = gtk::Box::new(gtk::Orientation::Horizontal, 32);
+        dhead.add_css_class("m3-detail-head");
         let detail_cover = cover_image(220, "m3-detail-cover");
         detail_cover.set_valign(gtk::Align::Start);
         dhead.append(&detail_cover);
@@ -375,6 +426,8 @@ impl Music {
         // ---- now-playing bar
         let bar_box = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         bar_box.add_css_class("m3-np-bar");
+        // Comfortable width on wide windows (narrow layouts drop it).
+        bar_box.set_size_request(520, -1);
         bar_box.add_css_class("m3-art-scheme");
         let bar_cover = cover_image(52, "m3-bar-cover");
         let bar_text = gtk::Box::new(gtk::Orientation::Vertical, 2);
@@ -382,6 +435,7 @@ impl Music {
         bar_text.set_valign(gtk::Align::Center);
         let bar_title = label("", &["m3-title-small-emphasized"]);
         bar_title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        bar_title.set_max_width_chars(36);
         let bar_artist = label("", &["m3-body-small", "m3-secondary-text"]);
         bar_artist.set_ellipsize(gtk::pango::EllipsizeMode::End);
         let bar_progress = WavyProgress::new(Some(0.0));
@@ -448,11 +502,13 @@ impl Music {
         np_body.set_halign(gtk::Align::Center);
         np_body.set_vexpand(true);
         let np_cover = ShapedCover::new(360, Shape::Cookie(9));
+        np_body.add_css_class("m3-np-body");
         np_cover.widget().set_valign(gtk::Align::Center);
         np_body.append(np_cover.widget());
         let np_col = gtk::Box::new(gtk::Orientation::Vertical, 10);
+        np_col.add_css_class("m3-np-col");
         np_col.set_valign(gtk::Align::Center);
-        np_col.set_size_request(440, -1);
+        np_col.set_size_request(380, -1);
         let np_title = label("", &["m3-display-small-emphasized", "m3-np-title"]);
         np_title.set_wrap(true);
         np_title.set_lines(2);
@@ -528,6 +584,7 @@ impl Music {
         np.set_transition_duration(380);
         np.set_child(Some(&np_box));
         np.set_can_target(false);
+        np.set_visible(false);
 
         // ---- snackbar
         let snack = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -544,8 +601,15 @@ impl Music {
         snackbar.set_margin_bottom(104);
         snackbar.set_can_target(false);
 
+        // A zero-height probe reports the window width for the layout.
+        let probe = gtk::DrawingArea::new();
+        probe.set_content_height(0);
+        probe.set_hexpand(true);
+        probe.set_valign(gtk::Align::Start);
+        probe.set_can_target(false);
         let overlay = gtk::Overlay::new();
         overlay.set_child(Some(&content));
+        overlay.add_overlay(&probe);
         overlay.add_overlay(&bar);
         overlay.add_overlay(&np);
         overlay.add_overlay(&snackbar);
@@ -624,6 +688,16 @@ impl Music {
             snackbar,
             snack_label,
             snack_timer: Rc::new(RefCell::new(None)),
+            layout: Cell::new(Layout::Wide),
+            monitor_width: Cell::new(i32::MAX),
+            title: title.clone(),
+            nav_labels,
+            search_toggle: search_toggle.clone(),
+            np_body: np_body.clone(),
+            np_col: np_col.clone(),
+            dhead: dhead.clone(),
+            bar_next: bar_next.clone(),
+            albums_grid: RefCell::new(None),
         });
         me.empty_label.set_text(&format!(
             "Music plays the audio files in {}. Add some there (subfolders are fine), then press Rescan.",
@@ -631,6 +705,50 @@ impl Music {
         ));
         me.build_views(&detail_page, &back, &play_all, &shuffle_all);
         me.connect(mpris_rx);
+        // Start in the layout that fits the monitor (a window that already
+        // got wider than a small screen could otherwise not shrink back).
+        let w = Rc::downgrade(&me);
+        me.window.connect_realize(move |win| {
+            let Some(surface) = win.surface() else { return };
+            let w = w.clone();
+            surface.connect_enter_monitor(move |_, m| {
+                let Some(me) = w.upgrade() else { return };
+                let mw = m.geometry().width();
+                me.monitor_width.set(mw);
+                let width = me.window.width().min(mw);
+                me.apply_layout(Layout::for_width(if width > 0 { width } else { mw }));
+            });
+        });
+        // Responsive layout from the window width.
+        let w = Rc::downgrade(&me);
+        probe.connect_resize(move |_, width, _| {
+            if let Some(me) = w.upgrade() {
+                // Never wider than the monitor (a window may start larger
+                // than a small screen).
+                me.apply_layout(Layout::for_width(width.min(me.monitor_width.get())));
+            }
+        });
+        // Collapsed search: the button reveals the field; an empty field
+        // that loses focus collapses again.
+        let w = Rc::downgrade(&me);
+        search_toggle.connect_clicked(move |b| {
+            if let Some(me) = w.upgrade() {
+                b.set_visible(false);
+                me.search.set_visible(true);
+                me.search.grab_focus();
+            }
+        });
+        let focus = gtk::EventControllerFocus::new();
+        let w = Rc::downgrade(&me);
+        focus.connect_leave(move |_| {
+            if let Some(me) = w.upgrade() {
+                if me.layout.get() != Layout::Wide && me.search.text().is_empty() {
+                    me.search.set_visible(false);
+                    me.search_toggle.set_visible(true);
+                }
+            }
+        });
+        me.search.add_controller(focus);
         *me.this.borrow_mut() = Rc::downgrade(&me);
         me.init_player();
         me.apply_saved(state::load_from(&state::path()));
@@ -712,7 +830,8 @@ impl Music {
             gtk::GridView::new(Some(gtk::NoSelection::new(Some(self.album_model.clone()))), Some(self.album_factory()));
         albums.add_css_class("m3-album-grid");
         albums.set_max_columns(8);
-        albums.set_min_columns(2);
+        albums.set_min_columns(1);
+        *self.albums_grid.borrow_mut() = Some(albums.clone());
         albums.set_single_click_activate(true);
         let w = weak.clone();
         albums.connect_activate(move |_, pos| {
@@ -1698,6 +1817,17 @@ impl Music {
         if open && !self.loaded.get() && self.queue.borrow().current().is_none() {
             return;
         }
+        // Only counts towards the window's minimum size while shown.
+        if open {
+            self.np.set_visible(true);
+        } else {
+            let np = self.np.clone();
+            glib::timeout_add_local_once(std::time::Duration::from_millis(400), move || {
+                if !np.reveals_child() {
+                    np.set_visible(false);
+                }
+            });
+        }
         self.np.set_reveal_child(open);
         self.np.set_can_target(open);
         if open && let Some(child) = self.np.child() {
@@ -1724,6 +1854,74 @@ impl Music {
 
     // ------------------------------------------------------------ wiring
 
+    /// Rearrange for the window width (see [`Layout`]).
+    fn apply_layout(&self, layout: Layout) {
+        if self.layout.replace(layout) == layout {
+            return;
+        }
+        let narrow = layout != Layout::Wide;
+        let tiny = layout == Layout::Tiny;
+        self.window.remove_css_class("compact");
+        self.window.remove_css_class("tiny");
+        if narrow {
+            self.window.add_css_class("compact");
+        }
+        if tiny {
+            self.window.add_css_class("tiny");
+        }
+        self.title.set_visible(!tiny);
+        // Ctrl+R and the empty-library page still rescan.
+        self.scan_busy.set_visible(!tiny);
+        for l in &self.nav_labels {
+            l.set_visible(!narrow);
+        }
+        // Search collapses to a button unless something is typed in it.
+        let keep_search = !narrow || !self.search.text().is_empty();
+        self.search.set_visible(keep_search);
+
+        self.search_toggle.set_visible(!keep_search);
+        // Now playing: cover above the controls.
+        self.np_body.set_orientation(if narrow { gtk::Orientation::Vertical } else { gtk::Orientation::Horizontal });
+        self.np_body.set_spacing(if narrow { 20 } else { 56 });
+        self.np_col.set_size_request(if narrow { -1 } else { 380 }, -1);
+        self.np_col.set_margin_start(if narrow { 24 } else { 0 });
+        self.np_col.set_margin_end(if narrow { 24 } else { 0 });
+        self.np_cover.set_size(match layout {
+            Layout::Wide => 360,
+            Layout::Compact => 260,
+            Layout::Tiny => 200,
+        });
+        // Album / artist page header.
+        self.dhead.set_orientation(if narrow { gtk::Orientation::Vertical } else { gtk::Orientation::Horizontal });
+        self.dhead.set_spacing(if narrow { 16 } else { 32 });
+        let cover = if narrow { 160 } else { 220 };
+        self.detail_cover.set_pixel_size(cover);
+        self.detail_cover.set_size_request(cover, cover);
+        self.detail_cover.set_halign(if narrow { gtk::Align::Start } else { gtk::Align::Center });
+        // Mini player: fill the width; drop Next on tiny windows.
+        self.bar.set_halign(if narrow { gtk::Align::Fill } else { gtk::Align::Center });
+        self.bar.set_margin_start(if narrow { 12 } else { 0 });
+        self.bar.set_margin_end(if narrow { 12 } else { 0 });
+        self.bar_next.set_visible(!tiny);
+        if let Some(b) = self.bar.child() {
+            b.set_size_request(if narrow { -1 } else { 520 }, -1);
+        }
+        if let Some(g) = self.albums_grid.borrow().as_ref() {
+            g.set_max_columns(if tiny {
+                2
+            } else if narrow {
+                4
+            } else {
+                8
+            });
+        }
+        // The new layout may allow a narrower window than the one GTK just
+        // settled on (it was clamped to the old minimum): size again once
+        // this layout pass is over, so the compositor's size is honoured.
+        let w = self.window.clone();
+        glib::idle_add_local_once(move || w.queue_resize());
+    }
+
     fn connect(self: &Rc<Self>, mpris_rx: async_channel::Receiver<Command>) {
         let weak = Rc::downgrade(self);
         let action = |name: &str, f: Handler| {
@@ -1744,6 +1942,8 @@ impl Music {
         action(
             "search",
             Box::new(|m| {
+                m.search_toggle.set_visible(false);
+                m.search.set_visible(true);
                 m.search.grab_focus();
             }),
         );

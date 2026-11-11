@@ -234,6 +234,12 @@ impl ShapedCover {
         &self.area
     }
 
+    /// Change the cover's size (responsive layouts).
+    pub fn set_size(&self, size: i32) {
+        self.area.set_content_width(size);
+        self.area.set_content_height(size);
+    }
+
     pub fn set_cover(&self, path: Option<&Path>) {
         let size = self.area.content_width().max(64) * 2;
         *self.surface.borrow_mut() = path.and_then(|p| load_pixbuf(p, size)).and_then(|p| surface(&p));

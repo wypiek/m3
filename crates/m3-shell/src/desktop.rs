@@ -10,7 +10,7 @@ use chrono::{Datelike, Local, Timelike};
 use gtk::prelude::*;
 use gtk::{gdk, gio, glib};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use m3_core::config::{TemperatureUnit, WidgetSide, WidgetsConfig};
+use m3_core::config::{TemperatureUnit, WIDGETS, WidgetPlace, WidgetSide, WidgetsConfig};
 use m3_widgets::{Shape, ShapeIcon};
 
 use crate::icons;
@@ -98,13 +98,74 @@ struct WeatherParts {
     days: gtk::Box,
 }
 
+/// One placed widget on the desktop.
+struct Item {
+    id: &'static str,
+    /// Outer box that is moved/scaled; holds the widget and edit handles.
+    wrapper: gtk::Overlay,
+    content: gtk::Widget,
+    /// Remove and resize buttons, shown only while editing.
+    handles: [gtk::Button; 2],
+    place: Cell<WidgetPlace>,
+    /// Natural size of the content (no stretch, unscaled), measured once.
+    nat: Cell<(f64, f64)>,
+    /// Not placed by the user: positioned by the default layout.
+    auto: Cell<bool>,
+}
+
+impl Item {
+    /// Size on screen for `p`: the stretched box, scaled.
+    fn screen_size(&self, p: WidgetPlace) -> (f64, f64) {
+        let (w, h) = self.nat.get();
+        (w * p.width * p.scale, h * p.height * p.scale)
+    }
+}
+
+/// New place for a resize to a `w`×`h` px box on screen, given the
+/// content's natural size: the content scales to fit the shorter side and
+/// the card stretches in the other direction (pure; tested).
+pub fn resized(p: WidgetPlace, nat: (f64, f64), w: f64, h: f64) -> WidgetPlace {
+    let (nw, nh) = (nat.0.max(1.0), nat.1.max(1.0));
+    let (w, h) = (w.max(nw * 0.5), h.max(nh * 0.5));
+    let scale = (w / nw).min(h / nh).clamp(0.5, 2.5);
+    WidgetPlace { scale, width: (w / (nw * scale)).clamp(1.0, 4.0), height: (h / (nh * scale)).clamp(1.0, 4.0), ..p }
+}
+
+/// What a drag on the desktop is doing (edit mode).
+#[derive(Clone, Copy)]
+enum DragOp {
+    Move {
+        item: usize,
+        x: f64,
+        y: f64,
+    },
+    /// Box size on screen when the resize started.
+    Resize {
+        item: usize,
+        w0: f64,
+        h0: f64,
+    },
+}
+
 pub struct DesktopWidgets {
     pub window: gtk::Window,
+    monitor: gdk::Monitor,
     cfg: RefCell<WidgetsConfig>,
     live: RefCell<Live>,
     dispatch: Rc<dyn Fn(Cmd)>,
     cpu_prev: Cell<Option<(u64, u64)>>,
     bus: RefCell<Option<gio::DBusConnection>>,
+    fixed: gtk::Fixed,
+    items: RefCell<Vec<Item>>,
+    editing: Cell<bool>,
+    toolbar: gtk::Box,
+    add_menu: gtk::MenuButton,
+    drag: Cell<Option<DragOp>>,
+}
+
+/// Keep a widget of `size` px fully inside an area of `area` px (pure; tested).
+pub fn clamp_pos(pos: (f64, f64), size: (f64, f64), area: (f64, f64)) -> (f64, f64) {
+    (pos.0.clamp(0.0, (area.0 - size.0).max(0.0)), pos.1.clamp(0.0, (area.1 - size.1).max(0.0)))
 }
 
 impl DesktopWidgets {
@@ -128,14 +189,50 @@ impl DesktopWidgets {
         window.add_css_class("m3-transparent");
         window.add_css_class("m3-desktop");
 
+        // Background area (resize → relayout), the freely placed widgets and
+        // the edit-mode toolbar on top.
+        let area = gtk::DrawingArea::new();
+        area.set_hexpand(true);
+        area.set_vexpand(true);
+        let fixed = gtk::Fixed::new();
+        fixed.add_css_class("m3-desktop-root");
+        let toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        toolbar.add_css_class("m3-desk-toolbar");
+        toolbar.set_halign(gtk::Align::Center);
+        toolbar.set_valign(gtk::Align::Start);
+        toolbar.set_margin_top(24);
+        toolbar.set_visible(false);
+        let overlay = gtk::Overlay::new();
+        overlay.set_child(Some(&area));
+        overlay.add_overlay(&fixed);
+        overlay.add_overlay(&toolbar);
+        window.set_child(Some(&overlay));
+
         let me = Rc::new(Self {
             window,
+            monitor: monitor.clone(),
             cfg: RefCell::new(cfg.clone()),
             live: RefCell::new(Live::default()),
             dispatch,
             cpu_prev: Cell::new(None),
             bus: RefCell::new(None),
+            fixed,
+            items: RefCell::new(Vec::new()),
+            editing: Cell::new(false),
+            toolbar,
+            add_menu: gtk::MenuButton::new(),
+            drag: Cell::new(None),
         });
+        {
+            let weak = Rc::downgrade(&me);
+            area.connect_resize(move |_, _, _| {
+                if let Some(me) = weak.upgrade() {
+                    me.relayout();
+                }
+            });
+        }
+        me.build_toolbar();
+        me.connect_input();
         me.rebuild();
         me.start_timers();
         me.window.set_visible(cfg.enabled);
@@ -153,70 +250,486 @@ impl DesktopWidgets {
         self.refresh_weather();
     }
 
+    // ---- layout and editing ------------------------------------------------------
+
+    /// Desktop area in logical pixels.
+    fn area(&self) -> (f64, f64) {
+        let (w, h) = (self.window.width(), self.window.height());
+        if w > 0 && h > 0 {
+            (f64::from(w), f64::from(h))
+        } else {
+            let g = self.monitor.geometry();
+            (f64::from(g.width()), f64::from(g.height()))
+        }
+    }
+
+    fn natural_size(w: &impl IsA<gtk::Widget>) -> (f64, f64) {
+        let (_, nw, _, _) = w.measure(gtk::Orientation::Horizontal, -1);
+        let (_, nh, _, _) = w.measure(gtk::Orientation::Vertical, nw);
+        (f64::from(nw), f64::from(nh))
+    }
+
+    /// Position every item from its saved place, or the default layout.
+    fn relayout(&self) {
+        let area = self.area();
+        self.auto_layout(area);
+        for item in self.items.borrow().iter() {
+            self.apply_place(item, area);
+        }
+    }
+
+    /// Default layout for widgets the user hasn't placed: the clock and
+    /// greeting stacked on one side, the rest in two columns on the other,
+    /// stacked from their real sizes, centred vertically and scaled down
+    /// if the screen is too short — so nothing overlaps at any resolution.
+    fn auto_layout(&self, area: (f64, f64)) {
+        let items = self.items.borrow();
+        if !items.iter().any(|i| i.auto.get()) {
+            return;
+        }
+        let right = self.cfg.borrow().side == WidgetSide::Right;
+        let (margin, gap) = (area.0 * 0.05, 18.0);
+        let size = |id: &str| items.iter().find(|i| i.id == id).map(|i| i.nat.get());
+        let hero: Vec<&str> = ["clock", "greeting"].into_iter().filter(|id| size(id).is_some()).collect();
+        let col0: Vec<&str> =
+            ["day", "media", "storage", "system"].into_iter().filter(|id| size(id).is_some()).collect();
+        let col1: Vec<&str> =
+            ["shortcuts", "countdown", "weather"].into_iter().filter(|id| size(id).is_some()).collect();
+        let height = |ids: &[&str]| -> f64 {
+            ids.iter().filter_map(|id| size(id)).map(|s| s.1).sum::<f64>() + gap * ids.len().saturating_sub(1) as f64
+        };
+        let width = |ids: &[&str]| ids.iter().filter_map(|id| size(id)).map(|s| s.0).fold(0.0, f64::max);
+        let tallest = height(&hero).max(height(&col0)).max(height(&col1));
+        let avail = area.1 * 0.9;
+        let scale = if tallest > avail { (avail / tallest).max(0.5) } else { 1.0 };
+        let place_column = |ids: &[&str], x: f64| {
+            let mut y = ((area.1 - height(ids) * scale) / 2.0).max(0.0);
+            for id in ids {
+                let Some(it) = items.iter().find(|i| i.id == *id) else { continue };
+                let (w, h) = it.nat.get();
+                // Centre narrower widgets in their column.
+                let cx = x + (width(ids) - w) * scale / 2.0;
+                if it.auto.get() {
+                    it.place.set(WidgetPlace { x: cx / area.0, y: y / area.1, scale, ..Default::default() });
+                }
+                y += (h + gap) * scale;
+            }
+        };
+        let (w0, w1) = (width(&col0) * scale, width(&col1) * scale);
+        if right {
+            place_column(&hero, margin);
+            place_column(&col1, area.0 - margin - w1);
+            place_column(&col0, area.0 - margin - w1 - gap - w0);
+        } else {
+            place_column(&hero, area.0 - margin - width(&hero) * scale);
+            place_column(&col0, margin);
+            place_column(&col1, margin + w0 + gap);
+        }
+    }
+
+    fn apply_place(&self, item: &Item, area: (f64, f64)) {
+        let p = item.place.get();
+        let (nw, nh) = item.nat.get();
+        // The card stretches; the content inside stays centred.
+        item.content.set_size_request((nw * p.width).round() as i32, (nh * p.height).round() as i32);
+        let s = p.scale.clamp(0.5, 2.5);
+        let (x, y) = clamp_pos((p.x * area.0, p.y * area.1), item.screen_size(p), area);
+        let t = gtk::gsk::Transform::new()
+            .translate(&gtk::graphene::Point::new(x as f32, y as f32))
+            .scale(s as f32, s as f32);
+        self.fixed.set_child_transform(&item.wrapper, Some(&t));
+    }
+
+    /// Save layout / visibility to `widgets.toml` (the shell's file watcher
+    /// then sees an unchanged config and does nothing).
+    fn save(&self) {
+        let c = self.cfg.borrow().clone();
+        match m3_core::config::default_dir() {
+            Ok(dir) => {
+                if let Err(e) = m3_core::config::save(&dir, &c) {
+                    tracing::warn!("cannot save widgets.toml: {e}");
+                }
+            }
+            Err(e) => tracing::warn!("cannot save widgets.toml: {e}"),
+        }
+    }
+
+    fn build_toolbar(self: &Rc<Self>) {
+        let tb = &self.toolbar;
+        tb.append(&label("Edit widgets", &["m3-title-small-emphasized", "m3-desk-toolbar-title"]));
+        let add_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        add_row.append(&icons::symbol_with("add", &["small"]));
+        add_row.append(&gtk::Label::new(Some("Add widget")));
+        self.add_menu.set_child(Some(&add_row));
+        self.add_menu.add_css_class("m3-tonal");
+        tb.append(&self.add_menu);
+        let button = |icon: &str, text: &str, class: &str| {
+            let b = gtk::Button::new();
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            row.append(&icons::symbol_with(icon, &["small"]));
+            row.append(&gtk::Label::new(Some(text)));
+            b.set_child(Some(&row));
+            b.add_css_class(class);
+            b
+        };
+        let reset = button("restart_alt", "Reset layout", "tonal");
+        let settings = button("tune", "Settings", "tonal");
+        let done = button("check", "Done", "filled");
+        let weak = Rc::downgrade(self);
+        reset.connect_clicked(move |_| {
+            if let Some(me) = weak.upgrade() {
+                me.cfg.borrow_mut().layout.clear();
+                me.save();
+                me.rebuild();
+            }
+        });
+        settings.connect_clicked(|_| open_settings());
+        let weak = Rc::downgrade(self);
+        done.connect_clicked(move |_| {
+            if let Some(me) = weak.upgrade() {
+                me.set_editing(false);
+            }
+        });
+        tb.append(&reset);
+        tb.append(&settings);
+        tb.append(&done);
+    }
+
+    /// Refill the "Add widget" menu with the widgets that are hidden.
+    fn refresh_add_menu(self: &Rc<Self>) {
+        let pop = gtk::Popover::new();
+        pop.add_css_class("menu");
+        let list = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let cfg = self.cfg.borrow().clone();
+        let hidden: Vec<(&'static str, &'static str)> =
+            WIDGETS.iter().copied().filter(|(id, _)| !cfg.shown(id) || !cfg.configured(id)).collect();
+        for (id, name) in hidden.iter().copied() {
+            let b = gtk::Button::new();
+            b.add_css_class("m3-menu-item");
+            b.add_css_class("flat");
+            let text = if cfg.configured(id) { name.to_owned() } else { format!("{name} — set up in Settings") };
+            b.set_child(Some(&label(&text, &[])));
+            let (weak, p) = (Rc::downgrade(self), pop.clone());
+            b.connect_clicked(move |_| {
+                p.popdown();
+                let Some(me) = weak.upgrade() else { return };
+                me.cfg.borrow_mut().set_shown(id, true);
+                me.save();
+                let ready = me.cfg.borrow().configured(id);
+                if ready {
+                    me.rebuild();
+                } else {
+                    open_settings();
+                }
+            });
+            list.append(&b);
+        }
+        if hidden.is_empty() {
+            list.append(&label("All widgets are on the desktop", &["m3-secondary-text", "m3-desk-menu-note"]));
+        }
+        pop.set_child(Some(&list));
+        self.add_menu.set_popover(Some(&pop));
+    }
+
+    pub fn set_editing(self: &Rc<Self>, on: bool) {
+        if self.editing.replace(on) == on {
+            return;
+        }
+        // Above windows while editing, so every widget can be reached.
+        self.window.set_layer(if on { Layer::Top } else { Layer::Bottom });
+        self.window.set_keyboard_mode(if on { KeyboardMode::Exclusive } else { KeyboardMode::None });
+        self.toolbar.set_visible(on);
+        if on {
+            self.window.add_css_class("editing");
+            self.refresh_add_menu();
+            m3_widgets::animate(&self.toolbar, "m3-enter");
+        } else {
+            self.window.remove_css_class("editing");
+        }
+        for item in self.items.borrow().iter() {
+            // While editing, a press moves the widget instead of using it.
+            item.content.set_can_target(!on);
+            for h in &item.handles {
+                h.set_visible(on);
+            }
+        }
+    }
+
+    /// The item under (x, y) in desktop coordinates and whether the press is
+    /// on its resize handle.
+    fn item_at(&self, x: f64, y: f64) -> Option<(usize, bool)> {
+        let picked = self.fixed.pick(x, y, gtk::PickFlags::DEFAULT)?;
+        let items = self.items.borrow();
+        let i = items.iter().position(|it| {
+            let w: &gtk::Widget = it.wrapper.upcast_ref();
+            picked == *w || picked.is_ancestor(w)
+        })?;
+        let on_handle = picked.has_css_class("m3-desk-resize")
+            || picked.ancestor(gtk::Button::static_type()).is_some_and(|b| b.has_css_class("m3-desk-resize"));
+        let on_close = picked.has_css_class("m3-desk-remove")
+            || picked.ancestor(gtk::Button::static_type()).is_some_and(|b| b.has_css_class("m3-desk-remove"));
+        if on_close {
+            return None;
+        }
+        Some((i, on_handle))
+    }
+
+    fn connect_input(self: &Rc<Self>) {
+        // Move / resize in edit mode.
+        let drag = gtk::GestureDrag::new();
+        let weak = Rc::downgrade(self);
+        drag.connect_drag_begin(move |g, x, y| {
+            let Some(me) = weak.upgrade() else { return };
+            let hit = if me.editing.get() { me.item_at(x, y) } else { None };
+            let Some((i, handle)) = hit else {
+                g.set_state(gtk::EventSequenceState::Denied);
+                return;
+            };
+            g.set_state(gtk::EventSequenceState::Claimed);
+            let items = me.items.borrow();
+            let it = &items[i];
+            let p = it.place.get();
+            let area = me.area();
+            let size = it.screen_size(p);
+            let (px, py) = clamp_pos((p.x * area.0, p.y * area.1), size, area);
+            me.drag.set(Some(if handle {
+                DragOp::Resize { item: i, w0: size.0, h0: size.1 }
+            } else {
+                DragOp::Move { item: i, x: px, y: py }
+            }));
+            it.wrapper.add_css_class("dragging");
+        });
+        let weak = Rc::downgrade(self);
+        drag.connect_drag_update(move |_, dx, dy| {
+            let Some(me) = weak.upgrade() else { return };
+            let area = me.area();
+            let items = me.items.borrow();
+            match me.drag.get() {
+                Some(DragOp::Move { item, x, y }) => {
+                    let it = &items[item];
+                    let mut p = it.place.get();
+                    let (nx, ny) = clamp_pos((x + dx, y + dy), it.screen_size(p), area);
+                    p.x = nx / area.0;
+                    p.y = ny / area.1;
+                    it.place.set(p);
+                    me.apply_place(it, area);
+                }
+                Some(DragOp::Resize { item, w0, h0 }) => {
+                    // The corner follows the pointer in both directions.
+                    let it = &items[item];
+                    let p = resized(it.place.get(), it.nat.get(), w0 + dx, h0 + dy);
+                    it.place.set(p);
+                    me.apply_place(it, area);
+                }
+                None => {}
+            }
+        });
+        let weak = Rc::downgrade(self);
+        drag.connect_drag_end(move |_, _, _| {
+            let Some(me) = weak.upgrade() else { return };
+            let Some(op) = me.drag.take() else { return };
+            let i = match op {
+                DragOp::Move { item, .. } | DragOp::Resize { item, .. } => item,
+            };
+            let entry = me.items.borrow().get(i).map(|it| {
+                it.wrapper.remove_css_class("dragging");
+                (it.id, it.place.get())
+            });
+            if let Some(it) = me.items.borrow().get(i) {
+                it.auto.set(false);
+            }
+            if let Some((id, place)) = entry {
+                // Tidy numbers in widgets.toml.
+                let round = |v: f64, k: f64| (v * k).round() / k;
+                let place = WidgetPlace {
+                    x: round(place.x, 1e4),
+                    y: round(place.y, 1e4),
+                    scale: round(place.scale, 100.0),
+                    width: round(place.width, 100.0),
+                    height: round(place.height, 100.0),
+                };
+                me.cfg.borrow_mut().layout.insert(id.to_owned(), place);
+                me.save();
+            }
+        });
+        self.fixed.add_controller(drag);
+
+        // Right-click on the desktop: Edit widgets / Settings.
+        let click = gtk::GestureClick::new();
+        click.set_button(3);
+        let weak = Rc::downgrade(self);
+        click.connect_pressed(move |g, _, x, y| {
+            let Some(me) = weak.upgrade() else { return };
+            if me.editing.get() {
+                return;
+            }
+            g.set_state(gtk::EventSequenceState::Claimed);
+            me.show_desktop_menu(x, y);
+        });
+        self.fixed.add_controller(click);
+
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(self);
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if key == gdk::Key::Escape {
+                if let Some(me) = weak.upgrade() {
+                    me.set_editing(false);
+                }
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        self.window.add_controller(keys);
+    }
+
+    fn show_desktop_menu(self: &Rc<Self>, x: f64, y: f64) {
+        let pop = gtk::Popover::new();
+        pop.add_css_class("menu");
+        pop.set_has_arrow(false);
+        pop.set_parent(&self.fixed);
+        pop.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        pop.set_position(gtk::PositionType::Bottom);
+        let list = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let item = |icon: &str, text: &str| {
+            let b = gtk::Button::new();
+            b.add_css_class("m3-menu-item");
+            b.add_css_class("flat");
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+            row.append(&icons::symbol_with(icon, &["small"]));
+            row.append(&gtk::Label::new(Some(text)));
+            b.set_child(Some(&row));
+            b
+        };
+        let edit = item("edit", "Edit widgets");
+        let settings = item("widgets", "Widget settings");
+        let style = item("palette", "Wallpaper and style");
+        let (weak, p) = (Rc::downgrade(self), pop.clone());
+        edit.connect_clicked(move |_| {
+            p.popdown();
+            if let Some(me) = weak.upgrade() {
+                me.set_editing(true);
+            }
+        });
+        let p = pop.clone();
+        settings.connect_clicked(move |_| {
+            p.popdown();
+            open_settings();
+        });
+        let p = pop.clone();
+        style.connect_clicked(move |_| {
+            p.popdown();
+            spawn_settings("appearance");
+        });
+        list.append(&edit);
+        list.append(&settings);
+        list.append(&style);
+        pop.set_child(Some(&list));
+        pop.connect_closed(|p| {
+            let p = p.clone();
+            glib::idle_add_local_once(move || p.unparent());
+        });
+        pop.popup();
+    }
+
+    /// Wrap a widget for free placement, with edit-mode handles on top.
+    fn wrap(self: &Rc<Self>, id: &'static str, content: gtk::Widget) -> Item {
+        // When the card is stretched, extra room goes to spacers at both
+        // ends so the content stays centred.
+        if let Some(b) = content.downcast_ref::<gtk::Box>() {
+            let vertical = b.orientation() == gtk::Orientation::Vertical;
+            let spacer = || {
+                let s = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+                if vertical {
+                    s.set_vexpand(true)
+                } else {
+                    s.set_hexpand(true)
+                }
+                s.set_can_target(false);
+                s
+            };
+            b.prepend(&spacer());
+            b.append(&spacer());
+        }
+        let nat = Self::natural_size(&content);
+        let wrapper = gtk::Overlay::new();
+        wrapper.add_css_class("m3-desk-item");
+        wrapper.set_child(Some(&content));
+        let close = icons::icon_button("close", "Remove from desktop");
+        close.add_css_class("m3-desk-remove");
+        close.set_halign(gtk::Align::End);
+        close.set_valign(gtk::Align::Start);
+        let weak = Rc::downgrade(self);
+        close.connect_clicked(move |_| {
+            if let Some(me) = weak.upgrade() {
+                me.cfg.borrow_mut().set_shown(id, false);
+                me.save();
+                me.rebuild();
+            }
+        });
+        let resize = icons::icon_button("open_in_full", "Drag to resize");
+        resize.add_css_class("m3-desk-resize");
+        resize.set_halign(gtk::Align::End);
+        resize.set_valign(gtk::Align::End);
+        let editing = self.editing.get();
+        close.set_visible(editing);
+        resize.set_visible(editing);
+        wrapper.add_overlay(&close);
+        wrapper.add_overlay(&resize);
+        let saved = self.cfg.borrow().layout.get(id).copied();
+        Item {
+            id,
+            wrapper,
+            content,
+            handles: [close, resize],
+            place: Cell::new(saved.unwrap_or_default()),
+            nat: Cell::new(nat),
+            auto: Cell::new(saved.is_none()),
+        }
+    }
+
     fn rebuild(self: &Rc<Self>) {
         let cfg = self.cfg.borrow().clone();
         let mut live = Live::default();
-        let root = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        root.add_css_class("m3-desktop-root");
-
-        let left = gtk::Box::new(gtk::Orientation::Vertical, 8);
-        left.set_valign(gtk::Align::Center);
-        left.add_css_class("m3-desktop-hero");
-        if cfg.clock {
-            left.append(&self.clock(&mut live));
+        for item in self.items.borrow_mut().drain(..) {
+            self.fixed.remove(&item.wrapper);
         }
-        if cfg.greeting {
-            left.append(&self.greeting(&cfg, &mut live));
-        }
-
-        let grid = gtk::Grid::new();
-        grid.set_row_spacing(18);
-        grid.set_column_spacing(18);
-        grid.set_valign(gtk::Align::Center);
-        grid.add_css_class("m3-desktop-column");
-        let (mut c0, mut c1) = (Vec::<gtk::Widget>::new(), Vec::<gtk::Widget>::new());
-        if cfg.day {
-            c0.push(self.day_badge(&mut live).upcast());
-        }
-        if cfg.shortcuts {
-            c1.push(self.shortcuts(&cfg).upcast());
-        }
-        if cfg.media {
-            c0.push(self.media(&mut live).upcast());
-        }
-        if !cfg.countdown.title.trim().is_empty() {
-            c1.push(self.countdown(&cfg, &mut live).upcast());
-        }
-        if cfg.storage || cfg.system {
-            c0.push(self.system(&cfg, &mut live).upcast());
-        }
-        if cfg.weather.enabled {
-            c1.push(self.weather(&mut live).upcast());
-        }
-        for (col, items) in [(0, c0), (1, c1)] {
-            for (row, w) in items.into_iter().enumerate() {
-                w.set_valign(gtk::Align::Center);
-                w.set_halign(gtk::Align::Center);
-                grid.attach(&w, col, row as i32, 1, 1);
+        let mut built: Vec<(&'static str, gtk::Widget)> = Vec::new();
+        for (id, _) in WIDGETS {
+            if !cfg.shown(id) || !cfg.configured(id) {
+                continue;
             }
+            let w: gtk::Widget = match *id {
+                "clock" => self.clock(&mut live).upcast(),
+                "greeting" => self.greeting(&cfg, &mut live).upcast(),
+                "day" => self.day_badge(&mut live).upcast(),
+                "shortcuts" => self.shortcuts(&cfg).upcast(),
+                "media" => self.media(&mut live).upcast(),
+                "countdown" => self.countdown(&cfg, &mut live).upcast(),
+                "storage" => self.system(&WidgetsConfig { system: false, ..cfg.clone() }, &mut live).upcast(),
+                "system" => self.system(&WidgetsConfig { storage: false, ..cfg.clone() }, &mut live).upcast(),
+                "weather" => self.weather(&mut live).upcast(),
+                _ => continue,
+            };
+            built.push((id, w));
         }
-
-        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        spacer.set_hexpand(true);
-        spacer.set_can_target(false);
-        let (a, b): (gtk::Widget, gtk::Widget) = match cfg.side {
-            WidgetSide::Right => (left.upcast(), grid.upcast()),
-            WidgetSide::Left => (grid.upcast(), left.upcast()),
-        };
-        a.add_css_class("m3-desktop-start");
-        b.add_css_class("m3-desktop-end");
-        root.append(&a);
-        root.append(&spacer);
-        root.append(&b);
-        self.window.set_child(Some(&root));
+        let editing = self.editing.get();
+        let mut items = Vec::new();
+        for (id, w) in built {
+            let item = self.wrap(id, w);
+            item.content.set_can_target(!editing);
+            self.fixed.put(&item.wrapper, 0.0, 0.0);
+            // Measure once styled (CSS applies after it joins the window).
+            item.nat.set(Self::natural_size(&item.content));
+            items.push(item);
+        }
+        *self.items.borrow_mut() = items;
         *self.live.borrow_mut() = live;
         self.tick();
-        m3_widgets::animate(&root, "m3-fade");
+        self.relayout();
+        if editing {
+            self.refresh_add_menu();
+        }
+        m3_widgets::animate(&self.fixed, "m3-fade");
     }
 
     // ---- hero: clock + greeting ---------------------------------------------
@@ -717,6 +1230,18 @@ impl DesktopWidgets {
     }
 }
 
+/// Start the Settings app on `page` (argv, no shell).
+fn spawn_settings(page: &str) {
+    let argv = [std::ffi::OsStr::new("m3-settings"), std::ffi::OsStr::new("--page"), std::ffi::OsStr::new(page)];
+    if let Err(e) = gio::Subprocess::newv(&argv, gio::SubprocessFlags::NONE) {
+        tracing::warn!("cannot start Settings: {e}");
+    }
+}
+
+fn open_settings() {
+    spawn_settings("widgets");
+}
+
 /// First name from the account's real name, else the login name.
 fn default_name() -> String {
     let real = glib::real_name().to_string_lossy().into_owned();
@@ -731,6 +1256,27 @@ fn default_name() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resize_stretches_one_way_and_scales_the_other() {
+        let p = WidgetPlace::default();
+        // Twice as tall: content stays 1×, the card stretches vertically.
+        let r = resized(p, (200.0, 100.0), 200.0, 200.0);
+        assert_eq!((r.scale, r.width, r.height), (1.0, 1.0, 2.0));
+        // Both bigger: content scales by the smaller factor.
+        let r = resized(p, (200.0, 100.0), 400.0, 300.0);
+        assert_eq!((r.scale, r.width), (2.0, 1.0));
+        assert!((r.height - 1.5).abs() < 1e-9);
+        // Never below half size.
+        assert_eq!(resized(p, (200.0, 100.0), 10.0, 10.0).scale, 0.5);
+    }
+
+    #[test]
+    fn widgets_stay_on_screen() {
+        assert_eq!(clamp_pos((100.0, 50.0), (200.0, 100.0), (1920.0, 1080.0)), (100.0, 50.0));
+        assert_eq!(clamp_pos((1900.0, -20.0), (200.0, 100.0), (1920.0, 1080.0)), (1720.0, 0.0));
+        assert_eq!(clamp_pos((10.0, 10.0), (3000.0, 100.0), (1920.0, 1080.0)), (0.0, 10.0));
+    }
 
     #[test]
     fn parts_of_day() {

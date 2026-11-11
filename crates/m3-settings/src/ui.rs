@@ -9,31 +9,75 @@ pub fn icon(name: &str) -> gtk::Label {
     l
 }
 
+/// The expressive shape behind a page's icon (varies from page to page).
+fn page_shape(index: usize) -> m3_widgets::Shape {
+    use m3_widgets::Shape::*;
+    [Cookie(9), Clover(4), Sunny(8), Flower(8), Cookie(12), Pentagon, Cookie(4), Burst(12)][index % 8]
+}
+
 /// A scrollable page with a large title; returns (page, content box).
 pub fn page(title: &str, subtitle: &str) -> (gtk::ScrolledWindow, gtk::Box) {
     let content = gtk::Box::new(gtk::Orientation::Vertical, 16);
     content.add_css_class("m3-settings-page");
+
+    // Header: the page's icon on an expressive shape, then title + subtitle.
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+    header.add_css_class("m3-page-header");
+    let index = crate::pages::ALL.iter().position(|p| p.title == title).unwrap_or(0);
+    let icon_name = crate::pages::ALL.get(index).map_or("settings", |p| p.icon);
+    let badge = m3_widgets::ShapeIcon::new(m3_widgets::Shape::Circle, icon_name, 64, true);
+    badge.widget().add_css_class("m3-page-badge");
+    badge.widget().set_valign(gtk::Align::Start);
+    // Morph from a circle into this page's shape when the page appears.
+    {
+        let view = badge.shape().clone();
+        let target = page_shape(index);
+        badge.widget().connect_map(move |_| {
+            view.morph_to(m3_widgets::Shape::Circle, 0.0, m3_widgets::SpringSpec::FAST);
+            let view = view.clone();
+            gtk::glib::timeout_add_local_once(std::time::Duration::from_millis(60), move || {
+                view.morph_to(target, 0.0, m3_widgets::SpringSpec::DEFAULT);
+            });
+        });
+    }
+    header.append(badge.widget());
+    let titles = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    titles.set_valign(gtk::Align::Center);
+    titles.set_hexpand(true);
     let t = gtk::Label::new(Some(title));
     t.add_css_class("m3-display-small-emphasized");
     t.add_css_class("m3-page-title");
     t.set_xalign(0.0);
-    content.append(&t);
+    t.set_wrap(true);
+    titles.append(&t);
     if !subtitle.is_empty() {
         let s = gtk::Label::new(Some(subtitle));
         s.add_css_class("m3-body-large");
         s.add_css_class("m3-secondary-text");
         s.set_xalign(0.0);
         s.set_wrap(true);
-        content.append(&s);
+        titles.append(&s);
     }
-    let clamp = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    clamp.set_halign(gtk::Align::Center);
-    clamp.set_size_request(720, -1);
-    clamp.append(&content);
+    header.append(&titles);
+    content.append(&header);
+
     let sw = gtk::ScrolledWindow::new();
-    sw.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
-    sw.set_child(Some(&clamp));
+    // `External`: the page's minimum width must not hold the window wide —
+    // otherwise it could never get narrow enough to switch to the stacked
+    // layout that makes the page fit.
+    sw.set_policy(gtk::PolicyType::External, gtk::PolicyType::Automatic);
+    sw.set_child(Some(&content));
     sw.set_vexpand(true);
+    sw.add_css_class("m3-settings-scroll");
+    // Content is at most CONTENT_MAX wide and centred, but shrinks freely.
+    let c = content.clone();
+    sw.hadjustment().connect_page_size_notify(move |a| {
+        let m = crate::layout::clamp_margin(a.page_size());
+        if c.margin_start() != m {
+            c.set_margin_start(m);
+            c.set_margin_end(m);
+        }
+    });
     (sw, content)
 }
 
@@ -53,6 +97,9 @@ pub fn card(parent: &gtk::Box, title: &str) -> gtk::Box {
     list.add_css_class("m3-settings-card");
     wrap.append(&list);
     parent.append(&wrap);
+    // Pages hide a card by hiding its list; take the heading with it.
+    let w = wrap.clone();
+    list.connect_visible_notify(move |l| w.set_visible(l.is_visible()));
     list
 }
 
@@ -87,6 +134,7 @@ pub fn row(
     control.update_property(&[gtk::accessible::Property::Label(title)]);
     r.append(control);
     list.append(&r);
+    crate::layout::register_row(&r, control.upcast_ref());
     r
 }
 
@@ -194,8 +242,13 @@ pub fn info(list: &gtk::Box, title: &str, value: &str) -> gtk::Label {
     v.add_css_class("m3-secondary-text");
     v.set_selectable(true);
     v.set_wrap(true);
-    // Without a width hint GTK wraps a label at its minimum width.
+    // A wrapping label's minimum width is one word, and a crowded row hands
+    // out minimums ("1920 ×" / "1080 @" / …). Ask for the text's own width
+    // (up to 40 characters), also when the text changes later.
     v.set_max_width_chars(40);
+    let fit = |l: &gtk::Label| l.set_width_chars(l.text().chars().count().min(40) as i32);
+    fit(&v);
+    v.connect_label_notify(fit);
     v.set_justify(gtk::Justification::Right);
     v.set_xalign(1.0);
     row(list, title, "", &v);

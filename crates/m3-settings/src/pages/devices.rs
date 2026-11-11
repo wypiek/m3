@@ -294,9 +294,10 @@ pub fn sound(ctx: &Rc<Ctx>) -> gtk::Widget {
     });
     let a = ctx.audio.clone();
     let u = updating.clone();
-    in_mute.connect_active_notify(move |_| {
+    in_mute.connect_active_notify(move |s| {
         if !u.get() {
-            a.send(AudioCmd::ToggleInputMute);
+            // The exact state, not a toggle: rapid clicks can't invert it.
+            a.send(AudioCmd::SetInputMute(s.is_active()));
         }
     });
     let (c, u) = (ctx.clone(), updating.clone());
@@ -333,24 +334,26 @@ pub fn sound(ctx: &Rc<Ctx>) -> gtk::Widget {
         status.set_visible(false);
         updating.set(true);
         let names: Vec<String> = au.sinks.iter().map(|d| d.description.clone()).collect();
-        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-        out_dev.set_model(Some(&gtk::StringList::new(&refs)));
+        set_choices(&out_dev, &names);
         if let Some(i) = au.sinks.iter().position(|d| Some(&d.name) == au.default_sink.as_ref()) {
-            out_dev.set_selected(i as u32);
+            if out_dev.selected() != i as u32 {
+                out_dev.set_selected(i as u32);
+            }
         }
         if let Some(o) = au.output() {
-            out_vol.set_value(o.volume.min(1.0));
+            set_unless_dragging(&out_vol, o.volume.min(1.0));
             out_mute.set_active(o.muted);
         }
         out_card.set_visible(!au.sinks.is_empty());
         let names: Vec<String> = au.sources.iter().map(|d| d.description.clone()).collect();
-        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-        in_dev.set_model(Some(&gtk::StringList::new(&refs)));
+        set_choices(&in_dev, &names);
         if let Some(i) = au.sources.iter().position(|d| Some(&d.name) == au.default_source.as_ref()) {
-            in_dev.set_selected(i as u32);
+            if in_dev.selected() != i as u32 {
+                in_dev.set_selected(i as u32);
+            }
         }
         if let Some(i) = au.input() {
-            in_vol.set_value(i.volume.min(1.0));
+            set_unless_dragging(&in_vol, i.volume.min(1.0));
             in_mute.set_active(i.muted);
         }
         in_card.set_visible(!au.sources.is_empty());
@@ -370,4 +373,24 @@ pub fn sound(ctx: &Rc<Ctx>) -> gtk::Widget {
         updating.set(false);
     });
     page.upcast()
+}
+
+/// Replace a dropdown's items only when they changed (a new model closes an
+/// open dropdown and loses the selection).
+fn set_choices(d: &gtk::DropDown, names: &[String]) {
+    let same = d.model().and_downcast::<gtk::StringList>().is_some_and(|m| {
+        m.n_items() as usize == names.len()
+            && names.iter().enumerate().all(|(i, n)| m.string(i as u32).is_some_and(|s| s == n.as_str()))
+    });
+    if !same {
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        d.set_model(Some(&gtk::StringList::new(&refs)));
+    }
+}
+
+/// Update a slider from the service unless the user is dragging it.
+fn set_unless_dragging(scale: &gtk::Scale, v: f64) {
+    if !scale.state_flags().contains(gtk::StateFlags::ACTIVE) && (scale.value() - v).abs() > 0.004 {
+        scale.set_value(v);
+    }
 }

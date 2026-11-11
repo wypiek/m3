@@ -93,7 +93,9 @@ pub fn build(ctx: &Rc<Ctx>) -> gtk::Widget {
         let enabled = gtk::Switch::new();
         enabled.set_active(prefs.enabled);
         enabled.set_tooltip_text(Some("Allow notifications"));
+        enabled.set_valign(gtk::Align::Center);
         let popups = gtk::CheckButton::with_label("Popups");
+        popups.set_valign(gtk::Align::Center);
         popups.set_active(prefs.popups);
         popups.set_sensitive(prefs.enabled);
         b.append(&popups);

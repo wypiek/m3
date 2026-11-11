@@ -67,6 +67,26 @@ pub fn send(req: Request) {
     });
 }
 
+/// Send requests in order over one connection (e.g. focus a window, then
+/// act on it). Errors are logged.
+pub fn send_all(reqs: Vec<Request>) {
+    glib::spawn_future_local(async move {
+        let r = gio::spawn_blocking(move || -> Result<(), String> {
+            let mut c = Client::connect().map_err(|e| e.to_string())?;
+            for req in &reqs {
+                c.request(req).map_err(|e| e.to_string())?;
+            }
+            Ok(())
+        })
+        .await;
+        match r {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => warn!("compositor request failed: {e}"),
+            Err(_) => warn!("compositor request panicked"),
+        }
+    });
+}
+
 pub fn action(a: Action) {
     send(Request::Action { action: a });
 }

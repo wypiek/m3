@@ -28,6 +28,8 @@ pub struct Notifications {
     popup_window: gtk::Window,
     popups: gtk::Box,
     popup_widgets: RefCell<HashMap<u32, gtk::Widget>>,
+    /// The expiry timer of each popup (one per notification id).
+    popup_timers: RefCell<HashMap<u32, glib::SourceId>>,
     /// Action handlers for the shell's own notifications (screenshots,
     /// battery…); other notifications' actions go to their app over D-Bus.
     internal: RefCell<HashMap<u32, ActionHandler>>,
@@ -177,6 +179,7 @@ impl Notifications {
             popup_window,
             popups,
             popup_widgets: RefCell::new(HashMap::new()),
+            popup_timers: RefCell::new(HashMap::new()),
             internal: RefCell::new(HashMap::new()),
             center_window,
             center_revealer,
@@ -287,8 +290,13 @@ impl Notifications {
 
     fn show_popup(self: &Rc<Self>, n: &Notification) {
         if let Some(old) = self.popup_widgets.borrow_mut().remove(&n.id) {
-            self.popups.remove(&old);
+            if old.parent().as_ref() == Some(self.popups.upcast_ref()) {
+                self.popups.remove(&old);
+            }
         }
+        // An updated notification (same id) restarts its expiry instead of
+        // inheriting the old timer.
+        self.cancel_expiry(n.id);
         let card = self.card(n, true);
         m3_widgets::animate(&card, "m3-enter");
         let revealer = gtk::Revealer::new();
@@ -302,7 +310,12 @@ impl Notifications {
             match oldest {
                 Some(w) => {
                     self.popups.remove(&w);
-                    self.popup_widgets.borrow_mut().retain(|_, v| v != &w);
+                    let gone: Vec<u32> =
+                        self.popup_widgets.borrow().iter().filter(|(_, v)| **v == w).map(|(k, _)| *k).collect();
+                    for id in gone {
+                        self.popup_widgets.borrow_mut().remove(&id);
+                        self.cancel_expiry(id);
+                    }
                 }
                 None => break,
             }
@@ -319,27 +332,61 @@ impl Notifications {
             _ => Some(6000),
         };
         if let Some(ms) = timeout {
-            let me = Rc::downgrade(self);
-            let id = n.id;
-            glib::timeout_add_local_once(Duration::from_millis(ms), move || {
+            self.schedule_expiry(n.id, ms);
+            // Hovering keeps it on screen; leaving gives a few more seconds.
+            let motion = gtk::EventControllerMotion::new();
+            let (me, id) = (Rc::downgrade(self), n.id);
+            motion.connect_enter(move |_, _, _| {
                 if let Some(s) = me.upgrade() {
-                    s.dismiss_popup(id);
-                    if s.history.borrow().iter().any(|x| x.id == id && x.transient) {
-                        s.remove(id, CloseReason::Expired);
+                    s.cancel_expiry(id);
+                }
+            });
+            let (me, id) = (Rc::downgrade(self), n.id);
+            motion.connect_leave(move |_| {
+                if let Some(s) = me.upgrade() {
+                    if s.popup_widgets.borrow().contains_key(&id) {
+                        s.schedule_expiry(id, 3000);
                     }
                 }
             });
+            card.add_controller(motion);
+        }
+    }
+
+    fn schedule_expiry(self: &Rc<Self>, id: u32, ms: u64) {
+        self.cancel_expiry(id);
+        let me = Rc::downgrade(self);
+        let source = glib::timeout_add_local_once(Duration::from_millis(ms), move || {
+            if let Some(s) = me.upgrade() {
+                // This source has fired: forget it so it is never removed twice.
+                s.popup_timers.borrow_mut().remove(&id);
+                s.dismiss_popup(id);
+                if s.history.borrow().iter().any(|x| x.id == id && x.transient) {
+                    s.remove(id, CloseReason::Expired);
+                }
+            }
+        });
+        self.popup_timers.borrow_mut().insert(id, source);
+    }
+
+    fn cancel_expiry(&self, id: u32) {
+        if let Some(t) = self.popup_timers.borrow_mut().remove(&id) {
+            t.remove();
         }
     }
 
     fn dismiss_popup(&self, id: u32) {
+        self.cancel_expiry(id);
         let w = self.popup_widgets.borrow_mut().remove(&id);
         if let Some(w) = w.and_then(|w| w.downcast::<gtk::Revealer>().ok()) {
             w.set_reveal_child(false);
             let popups = self.popups.clone();
             let win = self.popup_window.clone();
             glib::timeout_add_local_once(Duration::from_millis(260), move || {
-                popups.remove(&w);
+                // It may already be gone (replaced, or pushed out by newer popups).
+                if w.parent().as_ref() == Some(popups.upcast_ref()) {
+                    popups.remove(&w);
+                }
                 if popups.first_child().is_none() {
                     win.set_visible(false);
                 }

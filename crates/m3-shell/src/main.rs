@@ -22,6 +22,7 @@ mod shell;
 mod status;
 mod style;
 mod tray;
+mod window_menu;
 
 use gtk::{gio, glib, prelude::*};
 

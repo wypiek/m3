@@ -245,6 +245,7 @@ pub fn build(ctx: &Rc<Ctx>) -> gtk::Widget {
             move |v| c.compositor.update(|x| x.general.hot_corner = v),
         );
     }
+    title_bar_buttons(&card);
     {
         let c = ctx.clone();
         ui::switch(
@@ -365,4 +366,27 @@ pub fn build(ctx: &Rc<Ctx>) -> gtk::Widget {
     }
     ui::row(&card, "Defaults", "Undo all changes to shortcuts", &reset);
     page.upcast()
+}
+
+/// "Title bar buttons" — the shared `button-layout` setting apps read.
+fn title_bar_buttons(card: &gtk::Box) {
+    const SCHEMA: &str = "org.gnome.desktop.wm.preferences";
+    let Some(source) = gtk::gio::SettingsSchemaSource::default() else { return };
+    if source.lookup(SCHEMA, true).is_none() {
+        return;
+    }
+    let settings = gtk::gio::Settings::new(SCHEMA);
+    let layouts = [
+        ("Minimize, maximize and close", "appmenu:minimize,maximize,close"),
+        ("Minimize and close", "appmenu:minimize,close"),
+        ("Close only", "appmenu:close"),
+    ];
+    let current = settings.string("button-layout");
+    let index = layouts.iter().position(|l| l.1 == current.as_str()).unwrap_or(0);
+    let labels: Vec<&str> = layouts.iter().map(|l| l.0).collect();
+    ui::dropdown(card, "Title bar buttons", "For apps that draw their own title bars", &labels, index, move |i| {
+        if let Err(e) = settings.set_string("button-layout", layouts[i].1) {
+            tracing::warn!("cannot set the title-bar button layout: {e}");
+        }
+    });
 }

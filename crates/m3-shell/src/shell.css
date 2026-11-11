@@ -377,3 +377,10 @@ button.m3-panel-search {
 .m3-panel.islands button.m3-ws { border-color: var(--m3-primary-fixed-dim); }
 .m3-panel.islands button.m3-ws.occupied { background-color: var(--m3-primary-fixed-dim); border-color: var(--m3-primary-fixed-dim); }
 .m3-panel.islands button.m3-ws.active { background-color: var(--m3-tertiary-fixed-dim); border-color: var(--m3-tertiary-fixed-dim); color: var(--m3-on-tertiary-fixed); }
+
+/* Island hover / press feedback. */
+.m3-panel.islands > box > button:hover,
+.m3-panel.islands > box > menubutton > button:hover {
+  background-image: linear-gradient(var(--m3-primary-hover), var(--m3-primary-hover));
+}
+.m3-panel.islands > box > button:active { border-radius: var(--m3-radius-l); }

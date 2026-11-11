@@ -83,6 +83,7 @@ struct Tab {
     page: gtk::ScrolledWindow,
     pill: gtk::Box,
     label: gtk::Label,
+    close: gtk::Button,
 }
 
 impl Tab {
@@ -99,11 +100,17 @@ impl Tab {
     }
 }
 
+/// Below this window width tabs are compact (short titles, close button
+/// only on the selected tab).
+const COMPACT_WIDTH: i32 = 620;
+
 pub struct TerminalWindow {
     window: gtk::ApplicationWindow,
     style: Rc<AppStyle>,
     stack: gtk::Stack,
     strip: gtk::Box,
+    strip_scroll: gtk::ScrolledWindow,
+    compact: Cell<bool>,
     tabs: RefCell<Vec<Rc<Tab>>>,
     current: RefCell<Option<Rc<Tab>>>,
     search_revealer: gtk::Revealer,
@@ -123,19 +130,41 @@ impl TerminalWindow {
             .build();
         window.add_css_class("m3");
         window.add_css_class("m3-terminal-window");
+        window.set_size_request(360, 240);
 
-        // Title bar: pill tabs, then the new-tab button, then the window
-        // controls — draggable, merged with the window surface.
+        // Title bar: a horizontally scrolling strip of pill tabs with the
+        // new-tab button after the last tab, then the window controls. The
+        // strip takes the space that's there instead of widening the window.
         let strip = gtk::Box::new(gtk::Orientation::Horizontal, 4);
         strip.add_css_class("m3-tab-strip");
-        let strip_scroll = gtk::ScrolledWindow::new();
-        strip_scroll.set_policy(gtk::PolicyType::External, gtk::PolicyType::Never);
-        strip_scroll.set_child(Some(&strip));
-        strip_scroll.set_propagate_natural_width(true);
+        strip.set_halign(gtk::Align::Start);
         let new_tab = icon_button("add", "New tab (Ctrl+Shift+T)");
         new_tab.add_css_class("m3-new-tab");
         new_tab.set_action_name(Some("win.new-tab"));
         new_tab.set_valign(gtk::Align::Center);
+        // The strip asks for its natural width but can shrink to almost
+        // nothing (then it scrolls), so it never widens the window and the
+        // new-tab button right after it stays visible.
+        let strip_scroll = gtk::ScrolledWindow::new();
+        strip_scroll.add_css_class("m3-tab-scroll");
+        strip_scroll.set_policy(gtk::PolicyType::External, gtk::PolicyType::Never);
+        strip_scroll.set_child(Some(&strip));
+        strip_scroll.set_propagate_natural_width(true);
+        strip_scroll.set_min_content_width(48);
+        // The mouse wheel scrolls the tabs sideways.
+        let wheel = gtk::EventControllerScroll::new(
+            gtk::EventControllerScrollFlags::BOTH_AXES | gtk::EventControllerScrollFlags::KINETIC,
+        );
+        {
+            let sc = strip_scroll.clone();
+            wheel.connect_scroll(move |_, dx, dy| {
+                let adj = sc.hadjustment();
+                let delta = if dx.abs() > dy.abs() { dx } else { dy };
+                adj.set_value(adj.value() + delta * 48.0);
+                glib::Propagation::Stop
+            });
+        }
+        strip_scroll.add_controller(wheel);
         let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         spacer.set_hexpand(true);
         let bar = gtk::Box::new(gtk::Orientation::Horizontal, 6);
@@ -173,7 +202,15 @@ impl TerminalWindow {
         stack.set_transition_type(gtk::StackTransitionType::Crossfade);
         stack.set_transition_duration(120);
         stack.set_vexpand(true);
+        stack.add_css_class("m3-terminal-surface");
+        stack.set_overflow(gtk::Overflow::Hidden);
+        // A zero-height probe reports the content width (compact tabs).
+        let probe = gtk::DrawingArea::new();
+        probe.set_hexpand(true);
+        probe.set_content_height(0);
+        probe.set_can_target(false);
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        root.append(&probe);
         root.append(&search_revealer);
         root.append(&stack);
         window.set_child(Some(&root));
@@ -184,6 +221,8 @@ impl TerminalWindow {
             style: style.clone(),
             stack,
             strip,
+            strip_scroll,
+            compact: Cell::new(false),
             tabs: RefCell::new(Vec::new()),
             current: RefCell::new(None),
             search_revealer,
@@ -192,6 +231,22 @@ impl TerminalWindow {
             closing: Cell::new(false),
         });
         me.install_actions();
+        // Keep the selected tab in view whenever the strip's size changes
+        // (new tab, closed tab, window resized).
+        let w = Rc::downgrade(&me);
+        me.strip_scroll.hadjustment().connect_changed(move |_| {
+            if let Some(me) = w.upgrade() {
+                if let Some(t) = me.current() {
+                    me.reveal_tab(&t);
+                }
+            }
+        });
+        let w = Rc::downgrade(&me);
+        probe.connect_resize(move |_, width, _| {
+            if let Some(me) = w.upgrade() {
+                me.set_compact(width < COMPACT_WIDTH);
+            }
+        });
 
         // Search wiring.
         let w = Rc::downgrade(&me);
@@ -372,19 +427,24 @@ impl TerminalWindow {
         pill.add_css_class("m3-tab");
         let label = gtk::Label::new(Some("Terminal"));
         label.set_ellipsize(pango::EllipsizeMode::End);
-        label.set_max_width_chars(22);
-        label.set_width_chars(8);
+        label.set_max_width_chars(if self.compact.get() { 10 } else { 22 });
+        label.set_width_chars(if self.compact.get() { 4 } else { 8 });
         let main = gtk::Button::new();
         main.add_css_class("m3-tab-main");
-        main.set_child(Some(&label));
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        content.append(&icon("terminal"));
+        content.append(&label);
+        main.set_child(Some(&content));
         let close = icon_button("close", "Close tab (Ctrl+Shift+W)");
         close.add_css_class("m3-tab-close");
         pill.append(&main);
         pill.append(&close);
 
-        let tab = Rc::new(Tab { term: term.clone(), page: page.clone(), pill: pill.clone(), label });
+        let tab =
+            Rc::new(Tab { term: term.clone(), page: page.clone(), pill: pill.clone(), label, close: close.clone() });
         self.stack.add_child(&page);
         self.strip.append(&pill);
+        m3_widgets::animate(&pill, "m3-enter");
         self.tabs.borrow_mut().push(tab.clone());
 
         let w = Rc::downgrade(self);
@@ -529,10 +589,49 @@ impl TerminalWindow {
         self.window.set_title(Some(&tab.title()));
         self.copy_action.set_enabled(tab.term.has_selection());
         *self.current.borrow_mut() = Some(tab.clone());
+        self.update_close_buttons();
+        self.scroll_to(tab);
         if self.search_revealer.reveals_child() {
             self.apply_search(&self.search_entry.text());
         }
         tab.term.grab_focus();
+    }
+
+    /// Compact tabs on narrow windows.
+    fn set_compact(&self, compact: bool) {
+        if self.compact.replace(compact) == compact {
+            return;
+        }
+        for t in self.tabs.borrow().iter() {
+            t.label.set_max_width_chars(if compact { 10 } else { 22 });
+            t.label.set_width_chars(if compact { 4 } else { 8 });
+        }
+        self.update_close_buttons();
+        if let Some(t) = self.current() {
+            self.scroll_to(&t);
+        }
+    }
+
+    /// When compact, only the selected tab shows its close button.
+    fn update_close_buttons(&self) {
+        let compact = self.compact.get();
+        let current = self.current();
+        for t in self.tabs.borrow().iter() {
+            let selected = current.as_ref().is_some_and(|c| Rc::ptr_eq(c, t));
+            t.close.set_visible(!compact || selected);
+        }
+    }
+
+    /// Bring a tab into view in the scrolling strip.
+    fn reveal_tab(&self, tab: &Rc<Tab>) {
+        reveal(&self.strip_scroll, &self.strip, &tab.pill);
+    }
+
+    /// Same, again once the strip has been laid out (tab switches).
+    fn scroll_to(&self, tab: &Rc<Tab>) {
+        self.reveal_tab(tab);
+        let (sc, strip, pill) = (self.strip_scroll.clone(), self.strip.clone(), tab.pill.clone());
+        glib::timeout_add_local_once(std::time::Duration::from_millis(60), move || reveal(&sc, &strip, &pill));
     }
 
     fn close_tab(&self, tab: &Rc<Tab>) {
@@ -621,5 +720,21 @@ impl TerminalWindow {
         } else {
             self.search_entry.add_css_class("error");
         }
+    }
+}
+
+/// Scroll `strip_scroll` so `pill` (a child of `strip`) is fully visible.
+fn reveal(strip_scroll: &gtk::ScrolledWindow, strip: &gtk::Box, pill: &gtk::Box) {
+    let Some(r) = pill.compute_bounds(strip) else { return };
+    let adj = strip_scroll.hadjustment();
+    let (x, w) = (f64::from(r.x()), f64::from(r.width()));
+    let (v, page) = (adj.value(), adj.page_size());
+    if page <= 0.0 {
+        return;
+    }
+    if x < v {
+        adj.set_value(x - 8.0);
+    } else if x + w > v + page {
+        adj.set_value(x + w - page + 8.0);
     }
 }

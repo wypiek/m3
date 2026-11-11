@@ -4,6 +4,7 @@
 //! comment-preserving) and the compositor/shell pick changes up live. System
 //! pages talk to real services through `m3-services`.
 
+mod layout;
 mod pages;
 mod store;
 mod ui;
@@ -238,7 +239,7 @@ fn build(app: &gtk::Application) {
         });
     }
 
-    // Navigation rail + pages.
+    // Navigation (side bar or rail) + pages.
     let stack = gtk::Stack::new();
     stack.set_transition_type(gtk::StackTransitionType::Crossfade);
     stack.set_transition_duration(150);
@@ -250,17 +251,35 @@ fn build(app: &gtk::Application) {
     search.set_placeholder_text(Some("Search settings"));
     search.add_css_class("m3-search");
 
+    // Each item: the icon in an indicator pill, the label beside it (side
+    // bar) or under it (rail).
+    let mut nav_items: Vec<(gtk::Box, gtk::Label)> = Vec::new();
     for p in pages::ALL {
         let row = gtk::ListBoxRow::new();
         row.add_css_class("m3-nav-item");
+        row.set_tooltip_text(Some(p.title));
         let b = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-        b.append(&ui::icon(p.icon));
+        let indicator = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        indicator.add_css_class("m3-nav-indicator");
+        indicator.set_halign(gtk::Align::Center);
+        let icon = ui::icon(p.icon);
+        // Centred in the indicator, but never expanding the row (that would
+        // push the label away from the icon).
+        icon.set_halign(gtk::Align::Center);
+        icon.set_hexpand(true);
+        indicator.set_hexpand(false);
+        indicator.set_halign(gtk::Align::Start);
+        indicator.append(&icon);
+        b.append(&indicator);
         let l = gtk::Label::new(Some(p.title));
         l.set_xalign(0.0);
+        l.add_css_class("m3-nav-label");
+        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
         b.append(&l);
         row.set_child(Some(&b));
         row.set_widget_name(p.id);
         nav.append(&row);
+        nav_items.push((b, l));
     }
     let built: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     {
@@ -277,6 +296,9 @@ fn build(app: &gtk::Application) {
                 built.borrow_mut().push(p.id);
             }
             stack.set_visible_child_name(p.id);
+            if let Some(page) = stack.visible_child() {
+                m3_widgets::animate(&page, "m3-enter-up");
+            }
         });
     }
     {
@@ -297,12 +319,27 @@ fn build(app: &gtk::Application) {
 
     let side = gtk::Box::new(gtk::Orientation::Vertical, 12);
     side.add_css_class("m3-settings-side");
-    side.set_size_request(296, -1);
     let side_title = gtk::Label::new(Some("Settings"));
     side_title.add_css_class("m3-headline-medium-emphasized");
     side_title.add_css_class("m3-settings-title");
     side_title.set_xalign(0.0);
     side.append(&side_title);
+    // In the rail, search lives in a popover behind a search button.
+    let search_button = gtk::MenuButton::new();
+    search_button.add_css_class("m3-rail-search");
+    search_button.set_child(Some(&ui::icon("search")));
+    search_button.set_tooltip_text(Some("Search settings"));
+    search_button.set_halign(gtk::Align::Center);
+    let search_pop = gtk::Popover::new();
+    search_pop.set_position(gtk::PositionType::Right);
+    search_button.set_popover(Some(&search_pop));
+    {
+        let s = search.clone();
+        search_pop.connect_show(move |_| {
+            s.grab_focus();
+        });
+    }
+    side.append(&search_button);
     side.append(&search);
     let nav_scroll = gtk::ScrolledWindow::new();
     nav_scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
@@ -322,7 +359,60 @@ fn build(app: &gtk::Application) {
     let overlay = gtk::Overlay::new();
     overlay.set_child(Some(&body));
     overlay.add_overlay(&ctx.toast);
+    // Resize sensor: picks wide / medium / narrow from the window width.
+    let sensor = gtk::DrawingArea::new();
+    sensor.set_can_target(false);
+    overlay.add_overlay(&sensor);
     window.set_child(Some(&overlay));
+    window.set_size_request(360, 480);
+
+    let apply_mode = {
+        let (window, side, side_title, search, search_button, search_pop) = (
+            window.clone(),
+            side.clone(),
+            side_title.clone(),
+            search.clone(),
+            search_button.clone(),
+            search_pop.clone(),
+        );
+        move |mode: layout::Mode| {
+            for m in [layout::Mode::Wide, layout::Mode::Medium, layout::Mode::Narrow] {
+                window.remove_css_class(m.css_class());
+            }
+            window.add_css_class(mode.css_class());
+            let rail = mode != layout::Mode::Wide;
+            side_title.set_visible(!rail);
+            search_button.set_visible(rail);
+            side.set_size_request(if rail { 88 } else { 280 }, -1);
+            // Move the search field between the side bar and the popover.
+            let in_side = search.parent().is_some_and(|p| p == *side.upcast_ref::<gtk::Widget>());
+            if rail && in_side {
+                side.remove(&search);
+                search_pop.set_child(Some(&search));
+            } else if !rail && !in_side {
+                search_pop.set_child(None::<&gtk::Widget>);
+                side.insert_child_after(&search, Some(&search_button));
+            }
+            for (b, l) in &nav_items {
+                if let Some(ind) = b.first_child() {
+                    ind.set_halign(if rail { gtk::Align::Center } else { gtk::Align::Start });
+                }
+                l.set_hexpand(!rail);
+                b.set_orientation(if rail { gtk::Orientation::Vertical } else { gtk::Orientation::Horizontal });
+                b.set_spacing(if rail { 4 } else { 12 });
+                l.set_xalign(if rail { 0.5 } else { 0.0 });
+                l.set_max_width_chars(if rail { 9 } else { -1 });
+            }
+            layout::set_mode(mode);
+        }
+    };
+    apply_mode(layout::Mode::Wide);
+    sensor.connect_resize(move |_, w, _| {
+        let mode = layout::mode_for_width(w);
+        if mode != layout::mode() {
+            apply_mode(mode);
+        }
+    });
 
     let start = START_PAGE.with(|p| p.borrow().clone()).unwrap_or_else(|| "appearance".into());
     let index = pages::ALL.iter().position(|p| p.id == start).unwrap_or(0);

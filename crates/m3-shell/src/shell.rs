@@ -104,6 +104,7 @@ impl Shell {
         let (theme_cfg, _) = cfg::load_or(&config_dir, ThemeConfig::default());
         let (panels_cfg, _) = cfg::load_or(&config_dir, PanelsConfig::default());
         let (widgets_cfg, _) = cfg::load_or(&config_dir, WidgetsConfig::default());
+        ensure_button_layout();
         let wallpaper_seed = wallpaper_path(&theme_cfg, None, None).and_then(|p| m3_theme::wallpaper::cached_seed(&p));
         let theme = Theme::resolve(&theme_cfg, wallpaper_seed, m3_core::time::local_minutes());
         let style = Style::new();
@@ -459,6 +460,11 @@ impl Shell {
     fn on_event(self: &Rc<Self>, event: Event) {
         match event {
             Event::ScreenshotSaved { path } => self.screenshot_saved(path),
+            Event::WindowMenu { id, output, x, y, maximized, fullscreen, workspace } => {
+                let req = crate::window_menu::MenuRequest { id, output, x, y, maximized, fullscreen, workspace };
+                let ws = self.workspaces.borrow().clone();
+                crate::window_menu::show(&self.app, req, &ws);
+            }
             Event::WorkspacesChanged { workspaces } => {
                 let prev = self.workspaces.borrow().iter().find(|w| w.active).map(|w| w.index);
                 let now = workspaces.iter().find(|w| w.active).map(|w| (w.index, w.name.clone()));
@@ -888,6 +894,25 @@ enum Sheet {
 /// warned about this discharge (`u32::MAX` = none yet).
 fn low_battery_threshold(pct: u32, warned: u32) -> Option<u32> {
     [5, 10, 20].into_iter().find(|t| pct <= *t && *t < warned)
+}
+
+/// Title-bar buttons: apps draw their own title bars and show the buttons
+/// listed in `org.gnome.desktop.wm.preferences button-layout` (GTK, Firefox,
+/// Electron… read it, on Wayland through the settings portal). Its stock
+/// value often shows only "close"; give m3 sessions minimize and maximize
+/// too — unless the user picked a layout themselves.
+pub fn ensure_button_layout() {
+    const SCHEMA: &str = "org.gnome.desktop.wm.preferences";
+    let Some(source) = gio::SettingsSchemaSource::default() else { return };
+    if source.lookup(SCHEMA, true).is_none() {
+        return;
+    }
+    let s = gio::Settings::new(SCHEMA);
+    if s.user_value("button-layout").is_none() {
+        if let Err(e) = s.set_string("button-layout", "appmenu:minimize,maximize,close") {
+            warn!("cannot set the title-bar button layout: {e}");
+        }
+    }
 }
 
 #[cfg(test)]

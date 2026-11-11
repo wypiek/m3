@@ -224,6 +224,19 @@ pub enum Event {
     ShellAction {
         action: Action,
     },
+    /// A window asked for its window menu (title-bar right-click). The shell
+    /// shows it on `output` at (`x`, `y`) logical pixels from the output's
+    /// top-left corner.
+    WindowMenu {
+        id: u64,
+        output: Option<String>,
+        x: f64,
+        y: f64,
+        maximized: bool,
+        fullscreen: bool,
+        /// 1-based, like [`WorkspaceInfo::index`].
+        workspace: usize,
+    },
     /// Session lock state changed.
     LockChanged {
         locked: bool,
